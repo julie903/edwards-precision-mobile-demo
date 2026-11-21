@@ -53,7 +53,7 @@ function roleInfo(){
  const authoriser=roles.includes('SDNR.Authoriser');
  const office=authoriser||roles.includes('Office');
  const factory=roles.includes('Factory');
- return {authoriser,office,factory,allowed:office||factory,label:authoriser?'SDNR AUTHORISER · OFFICE':office?'OFFICE':factory?'FACTORY':'UNAUTHORISED'};
+ return {authoriser,office,factory,allowed:office||factory,label:authoriser?'ADMINISTRATOR':office?'OFFICE':factory?'FACTORY':'UNAUTHORISED'};
 }
 function formatDate(v){if(!/^\d{4}-\d{2}-\d{2}$/.test(String(v||'')))return String(v||'');const [y,m,d]=v.split('-');return `${d}-${m}-${y}`;}
 function makeJob(j){return `<article class="card job" tabindex="0" role="button" data-job="${escapeHTML(j.wo)}" aria-label="View ${escapeHTML(j.wo)}"><div class="row"><h2>${escapeHTML(j.wo)}</h2><span class="tag ${j.status==='Overdue'?'warn':''}">${escapeHTML(j.status)}</span></div><p><b>${escapeHTML(j.description||j.part)}</b></p><p>${escapeHTML(j.operationCount!=null?j.operationCount+' operations':j.op)} · Due ${escapeHTML(formatDate(j.dueDate||j.due))}</p></article>`;}
