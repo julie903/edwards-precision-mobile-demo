@@ -184,7 +184,7 @@ document.addEventListener('click',async ev=>{
   button.disabled=true;output.textContent='Checking private Microsoft permissions…';
   try{
     if(!roleInfo().office){output.textContent='Office authorisation unavailable for this account.';return;}
-    if(window.location.origin!=='https://julie903.github.io'||window.location.pathname!=='/edwards-precision-mobile-demo/auth-test.html'){
+    if(window.location.origin!=='https://julie903.github.io'||window.location.pathname!=='/edwards-precision-mobile-demo/auth-private-test.html'){
       output.textContent='Refused: this test must run at the registered Edwards Precision iPhone address.';return;
     }
     let result;
