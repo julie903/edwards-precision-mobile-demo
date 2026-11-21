@@ -5,6 +5,12 @@
 <meta name="theme-color" content="#12273b"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="default"><meta name="apple-mobile-web-app-title" content="Edwards Mobile">
 <link rel="manifest" href="manifest.webmanifest"><link rel="apple-touch-icon" sizes="180x180" href="icon-180.png"><link rel="icon" href="icon.svg" type="image/svg+xml"><link rel="stylesheet" href="styles.css">
 <title>Edwards Precision Mobile — Public Demonstration</title>
+<style>
+.job-click{cursor:pointer;touch-action:manipulation}.job-click:focus-visible{outline:3px solid #247c9c;outline-offset:3px}.job-click:active{background:#eff7fa}
+.back-link{border:0;background:none;color:#1d6b8d;font-weight:700;padding:10px 2px 18px;font-size:14px}
+.job-detail{border:1px solid #e1e8ee;background:#fff;border-radius:14px;padding:18px}.job-detail h2{margin:0;font-size:21px}.job-detail>.muted{margin:12px 0 20px}
+.detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px 12px}.detail-grid span{display:block;color:#667b8c;font-size:11px;margin-bottom:5px}.detail-grid strong{font-size:13px;overflow-wrap:anywhere}.detail-note{font-size:12px;color:#667b8c;line-height:1.5;margin-top:20px}
+</style>
 </head>
 <body>
 <div class="app">
@@ -17,6 +23,6 @@
 <nav aria-label="Main navigation"><button data-page="home" class="active"><span>⌂</span>Home</button><button data-page="orders"><span>▤</span>Jobs</button><button data-page="ncr"><span>⚑</span>NCRs</button><button data-page="more"><span>☷</span>More</button></nav>
 </div>
 <dialog id="roles"><form method="dialog"><h2>Preview a role</h2><p class="muted">This only changes the demonstration screen. Real access will require Microsoft work sign-in and server-enforced permissions.</p><button value="office">Office view</button><button value="factory">Factory view</button><button value="cancel" class="secondary">Cancel</button></form></dialog>
-<script src="app.js?v=20261121-fix1"></script>
+<script src="app.js?v=20261121-jobdetails2"></script>
 </body>
 </html>
