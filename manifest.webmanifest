@@ -1,7 +1,7 @@
 {
-  "name": "Edwards Precision Mobile \u2014 Secured Staging Demo",
+  "name": "Edwards Precision Mobile \u2014 Public Demo",
   "short_name": "Edwards Mobile",
-  "description": "Microsoft Entra gated test UI with fictional jobs only",
+  "description": "Public, fictional-data-only screen prototype. No authentication or live integrations.",
   "start_url": "./index.html",
   "scope": "./",
   "id": "./index.html",

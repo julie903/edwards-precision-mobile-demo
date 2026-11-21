@@ -4,19 +4,19 @@
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#12273b"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="default"><meta name="apple-mobile-web-app-title" content="Edwards Mobile">
 <link rel="manifest" href="manifest.webmanifest"><link rel="apple-touch-icon" sizes="180x180" href="icon-180.png"><link rel="icon" href="icon.svg" type="image/svg+xml"><link rel="stylesheet" href="styles.css">
-<title>Edwards Precision Mobile — Secure Staging Demo</title>
+<title>Edwards Precision Mobile — Public Demonstration</title>
 </head>
 <body>
 <div class="app">
-<header><div class="brand"><span class="mark">EP</span><div><strong>EDWARDS PRECISION</strong><small>MOBILE</small></div></div><button id="profile" class="profile" aria-label="Account and sign out">O</button></header>
+<header><div class="brand"><span class="mark">EP</span><div><strong>EDWARDS PRECISION</strong><small>MOBILE</small></div></div><button id="profile" class="profile" aria-label="Switch demonstration role">O</button></header>
 <main>
-<div class="notice"><b>SECURE STAGING DEMONSTRATION</b> · Fictional jobs. Microsoft sign-in required; fictional jobs only. No company data.</div>
+<div class="notice"><b>PUBLIC DEMONSTRATION ONLY</b> · Fictional jobs only. Office/Factory switch is a preview, not employee sign-in. No live data.</div>
 <div class="top"><div><p class="eyebrow" id="roleLabel">OFFICE VIEW</p><h1 id="heading">Good morning</h1><p class="muted" id="subtitle">Overview of production</p></div><div class="pill">● DEMO</div></div>
 <section id="screen"></section>
 </main>
 <nav aria-label="Main navigation"><button data-page="home" class="active"><span>⌂</span>Home</button><button data-page="orders"><span>▤</span>Jobs</button><button data-page="ncr"><span>⚑</span>NCRs</button><button data-page="more"><span>☷</span>More</button></nav>
 </div>
-
+<dialog id="roles"><form method="dialog"><h2>Preview a role</h2><p class="muted">This only changes the demonstration screen. Real access will require Microsoft work sign-in and server-enforced permissions.</p><button value="office">Office view</button><button value="factory">Factory view</button><button value="cancel" class="secondary">Cancel</button></form></dialog>
 <script src="app.js"></script>
 
 </body>

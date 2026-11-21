@@ -10,30 +10,5 @@ if(page==='ncr'){screen.innerHTML=`<div class="empty"><h2>${office?'Office NCR r
 if(page==='more'){screen.innerHTML=`<div class="listrow"><div><b>Job documents</b><br><span>Drawings, job cards, attachments</span></div>○</div><div class="listrow"><div><b>Part History</b><br><span>Role-limited lookup</span></div>○</div>${office?'<div class="listrow"><div><b>Financial overview</b><br><span>Restricted to authorised Office users</span></div>○</div>':''}<div class="listrow"><div><b>Account and security</b><br><span>Microsoft work sign-in required before launch</span></div>○</div><div class="empty" style="margin-top:18px">These are feature placeholders. This package does not access Smartsheet, QuickBooks, Microsoft 365 or production data.</div>`}
 }
 function renderJobs(){const filtered=jobs.filter(j=>[j.wo,j.part,j.customer].some(x=>x.toLowerCase().includes(query.toLowerCase())));$('#joblist').innerHTML=filtered.length?filtered.map(card).join(''):'<div class="empty">No matching sample jobs.</div>'}
-document.addEventListener('click',ev=>{const g=ev.target.closest('[data-go]');if(g){page=g.dataset.go;render()}const nav=ev.target.closest('[data-page]');if(nav){page=nav.dataset.page;render()}});$('#profile').addEventListener('click',()=>{if(confirm('Sign out of Edwards Precision Mobile?')) location.assign('/.auth/logout');});
-async function boot(){
-  try {
-    const response=await fetch('/.auth/me',{credentials:'same-origin',cache:'no-store'});
-    if(!response.ok) throw new Error('No verified session');
-    const result=await response.json();
-    const principal=result.clientPrincipal;
-    const roles=Array.isArray(principal?.userRoles)?principal.userRoles:[];
-    const hasOffice=roles.includes('office');
-    const hasFactory=roles.includes('factory');
-    if(!hasOffice&&!hasFactory) throw new Error('Your account has not been assigned an Office or Factory mobile role. Ask the app administrator for access.');
-    role=hasOffice?'office':'factory';
-    $('#profile').textContent=role==='office'?'O':'F';
-    render();
-  } catch (err) {
-    document.querySelector('nav').style.display='none';
-    $('#roleLabel').textContent='ACCESS NOT GRANTED';
-    $('#heading').textContent='Unable to open mobile demo';
-    $('#subtitle').textContent='Microsoft work account required';
-    screen.replaceChildren();
-    const message=document.createElement('div');message.className='empty';
-    message.textContent=err.message||'Authentication could not be verified.';
-    screen.appendChild(message);
-  }
-}
-boot();
+document.addEventListener('click',ev=>{const g=ev.target.closest('[data-go]');if(g){page=g.dataset.go;render()}const nav=ev.target.closest('[data-page]');if(nav){page=nav.dataset.page;render()}});$('#profile').addEventListener('click',()=>$('#roles').showModal());$('#roles').addEventListener('close',()=>{const v=$('#roles').returnValue;if(v==='office'||v==='factory'){role=v;page='home';render()}});render();
 // Deliberately no service worker caching authenticated content: none exists in this prototype.
