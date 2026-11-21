@@ -97,7 +97,7 @@ function render(){
   else html+=`<div class="card"><h2>${escapeHTML(op.id)}</h2><p><b>Part:</b> ${escapeHTML(op.partNumber)} · Rev ${escapeHTML(op.revision)}</p><p><b>Operation:</b> ${escapeHTML(op.op)} · ${escapeHTML(op.description)}</p><p><b>Assigned machinist:</b> ${escapeHTML(op.machinist)}</p><p><b>Due:</b> ${escapeHTML(formatDate(op.dueDate))}</p><p><b>Status:</b> ${escapeHTML(op.status)}</p><p><b>Progress:</b> ${Number(op.progress)}%</p><progress max="100" value="${Number(op.progress)}" style="width:100%"></progress></div><p class="quiet">No drawing attachments, live jobs, time recording or status editing are enabled.</p>`;
  }
  if(screen==='ncr') html=`<div class="card"><h2>${r.office?'Office NCR review':'Factory NCR reporting'}</h2><p>${r.authoriser?'SDNR approval would be available to your authorised account only after the protected backend independently checks your identity and permissions.':r.office?'You may review NCRs but not issue SDNRs.':'Factory staff can raise NCRs and record actions for each defect in the future live system.'}</p><button class="btn" disabled>${r.authoriser?'Issue SDNR — disabled':r.office?'Review NCR — disabled':'Raise NCR — disabled'}</button></div>`;
- if(screen==='more') html=`<div class="card"><h2>Account</h2><p class="idline">${escapeHTML(currentAccount.username||'')}</p><p class="idline">Assigned claims: ${escapeHTML(roles.join(', '))}</p></div><div class="card"><h2>Access</h2><p>${r.office?'Office preview available':'Office preview unavailable'}</p><p>${r.factory?'Factory role assigned':r.authoriser?'Office functions inherited through authoriser policy':'Factory role not assigned'}</p><p>All live data and write actions remain disabled.</p></div>${r.office?'<div class="card"><h2>Factory operations preview</h2><p>Fictional API records only. This does not grant a Factory employee Office permissions.</p><button class="btn" id="previewFactory">Open Factory operations preview</button></div>':''}<div class="card"><h2>Protected Render API test</h2><p>Request an API token from Microsoft and test the development endpoint. Tokens are never displayed.</p><button class="btn" id="testApi">Test Microsoft API connection</button><p id="apiResult" role="status" aria-live="polite">Not tested</p></div><button class="btn secondary" id="signout">Sign out of Microsoft 365 test</button>`;
+ if(screen==='more') html=`<div class="card"><h2>Account</h2><p class="idline">${escapeHTML(currentAccount.username||'')}</p><p class="idline">Assigned claims: ${escapeHTML(roles.join(', '))}</p></div><div class="card"><h2>Access</h2><p>${r.office?'Office preview available':'Office preview unavailable'}</p><p>${r.factory?'Factory role assigned':r.authoriser?'Office functions inherited through authoriser policy':'Factory role not assigned'}</p><p>All live data and write actions remain disabled.</p></div>${r.office?'<div class="card"><h2>Factory operations preview</h2><p>Fictional API records only. This does not grant a Factory employee Office permissions.</p><button class="btn" id="previewFactory">Open Factory operations preview</button></div>':''}<div class="card"><h2>Private iMac authentication check</h2><p>Check your Microsoft Office permissions through private NetBird HTTPS. No customer records or Smartsheet access.</p><button class="btn" id="testPrivateAuth">Check private Microsoft access</button><p id="privateAuthResult" role="status" aria-live="polite">Not tested</p></div><div class="card"><h2>Protected Render API test</h2><p>Request an API token from Microsoft and test the development endpoint. Tokens are never displayed.</p><button class="btn" id="testApi">Test Microsoft API connection</button><p id="apiResult" role="status" aria-live="polite">Not tested</p></div><button class="btn secondary" id="signout">Sign out of Microsoft 365 test</button>`;
  $('content').innerHTML=html;
 }
 async function authorisedGet(path){
@@ -179,6 +179,41 @@ document.addEventListener('click',async ev=>{
  const job=ev.target.closest('[data-job]');if(job&&currentAccount&&roleInfo().office){chosenJob=job.dataset.job;screen='detail';await loadDetail(chosenJob);return;}
  if(ev.target.id==='loadJobs'&&currentAccount&&roleInfo().office){await loadJobs();return;}
  if(ev.target.id==='back'){screen='jobs';render();return;}
+ if(ev.target.id==='testPrivateAuth'&&application&&currentAccount){
+  const button=ev.target;const output=$('privateAuthResult');
+  button.disabled=true;output.textContent='Checking private Microsoft permissions…';
+  try{
+    if(!roleInfo().office){output.textContent='Office authorisation unavailable for this account.';return;}
+    if(window.location.origin!=='https://julie903.github.io'||window.location.pathname!=='/edwards-precision-mobile-demo/auth-test.html'){
+      output.textContent='Refused: this test must run at the registered Edwards Precision iPhone address.';return;
+    }
+    let result;
+    try{result=await application.acquireTokenSilent({account:currentAccount,scopes:[apiScope]});}
+    catch(e){
+      if(e instanceof msal.InteractionRequiredAuthError || ['interaction_required','consent_required','login_required'].includes(e.errorCode)){
+        output.textContent='Microsoft interaction required. Returning to sign-in…';
+        await application.acquireTokenRedirect({account:currentAccount,scopes:[apiScope]});return;
+      }
+      throw e;
+    }
+    const response=await fetch('https://mobile.edwardsprecision.co.uk:9443/auth/check',{method:'GET',mode:'cors',cache:'no-store',redirect:'error',referrerPolicy:'no-referrer',headers:{Authorization:'Bearer '+result.accessToken}});
+    let body={};try{body=await response.json();}catch{}
+    if(response.status===200&&body.status==='ok'&&body.authenticated===true&&body.officeAccess===true&&body.liveDataEnabled===false&&body.mode==='auth-check'){
+      output.textContent='PASS — private Microsoft API accepted your Office permissions. Live orders remain disabled.';
+    }else if(response.status===403){
+      output.textContent='DENIED (403) — Office or designated SDNR Authoriser permission was not accepted. No data accessed.';
+    }else if(response.status===401){
+      output.textContent='DENIED (401) — Microsoft access token rejected. No data accessed.';
+    }else if(response.status===503){
+      output.textContent='NOT READY (503) — private authentication test not configured. No data accessed.';
+    }else{
+      output.textContent='Unexpected private API response: HTTP '+response.status+'. No data accessed.';
+    }
+  }catch(e){
+    output.textContent='Check could not complete: '+(e instanceof TypeError?'private network or browser access error':(e.errorCode||'Microsoft sign-in error'))+'. No tokens displayed.';
+  }finally{button.disabled=false;}
+  return;
+ }
  if(ev.target.id==='testApi'&&application&&currentAccount){
   const button=ev.target;const output=$('apiResult');
   button.disabled=true;output.textContent='Requesting Microsoft API permission…';
