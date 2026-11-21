@@ -1,0 +1,265 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#142c40"><meta name="robots" content="noindex,nofollow"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="default"><meta name="apple-mobile-web-app-title" content="Edwards Mobile"><link rel="manifest" href="./manifest.webmanifest"><link rel="apple-touch-icon" sizes="180x180" href="./icon-180.png"><link rel="icon" type="image/svg+xml" href="./icon.svg">
+<meta http-equiv="Cache-Control" content="no-store">
+<title>Edwards Precision Mobile — Office Development</title>
+<style>
+:root{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;color:#142c40;background:#eaf1f7;color-scheme:light}
+[hidden]{display:none!important}*{box-sizing:border-box}body{margin:0;padding:0}.app{max-width:530px;min-height:100dvh;margin:0 auto;background:#f7fafc;border-radius:18px;box-shadow:0 8px 35px #142c4014;overflow:hidden;display:flex;flex-direction:column}
+header{background:#142c40;color:#fff;padding:calc(18px + env(safe-area-inset-top)) 20px 18px;display:flex;align-items:center;gap:10px}.mark{background:#237b9c;border-radius:10px;padding:10px;font-size:15px;font-weight:800}header strong{font-size:13px;letter-spacing:1.5px}header small{display:block;color:#9bb5c8;font-size:10px;letter-spacing:2px;margin-top:3px}
+main{padding:17px;flex:1}.notice{font-size:12px;background:#fff7e8;color:#795621;border:1px solid #e6bf71;border-radius:10px;line-height:1.55;padding:12px;margin-bottom:20px}
+.eyebrow{font-size:11px;color:#297b9e;font-weight:800;letter-spacing:1.5px;margin:0 0 7px}h1{font-size:24px;letter-spacing:-.7px;margin:0 0 8px}.muted{font-size:13px;line-height:1.5;color:#607487}.card{background:#fff;border:1px solid #dfe8ef;border-radius:12px;padding:15px;margin:11px 0}.card h2{font-size:16px;margin:0 0 8px}.card p{font-size:13px;line-height:1.5;margin:5px 0;color:#546d80}.row{display:flex;align-items:center;justify-content:space-between;gap:10px}.tag{background:#e7f2f8;color:#216e90;font-weight:750;font-size:11px;padding:5px 8px;border-radius:7px}.tag.warn{background:#fff0e8;color:#ad5b33}
+.btn{background:#19769a;border:0;color:#fff;font-size:15px;font-weight:700;padding:13px 16px;border-radius:10px;cursor:pointer;width:100%;margin-top:10px}.btn.secondary{background:#fff;border:1px solid #aec5d2;color:#1d526c}.btn:disabled{opacity:.55;cursor:not-allowed}
+nav{display:flex;border-top:1px solid #dde7ed;background:#fff;position:sticky;bottom:0;padding-bottom:env(safe-area-inset-bottom)}nav button{flex:1;background:transparent;border:0;padding:14px 4px;color:#63798d;font-weight:650;font-size:13px;cursor:pointer}nav button.active{color:#147699;border-top:3px solid #147699;padding-top:11px}
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:15px}.stat{background:#fff;border:1px solid #dde7ee;padding:15px;border-radius:12px}.stat b{display:block;font-size:24px}.stat span{font-size:12px;color:#677b8a}.job{cursor:pointer}.job:focus-visible{outline:3px solid #147699}.back{background:none;border:0;color:#147699;font-weight:700;font-size:14px;padding:10px 0;cursor:pointer}
+#status{overflow-wrap:anywhere}.idline{font-size:12px;word-break:break-word;color:#4c667a}.quiet{font-size:12px;color:#718391}.hide{display:none!important}.search{display:block;width:100%;font:inherit;font-size:16px;border:1px solid #cbdbe5;border-radius:10px;padding:12px;margin:12px 0;background:#fff}
+</style>
+<script src="https://alcdn.msauth.net/browser/2.35.0/js/msal-browser.min.js" defer></script>
+</head>
+<body>
+<div class="app"><header><div class="mark">EP</div><div><strong>EDWARDS PRECISION</strong><small>MOBILE · OFFICE DEVELOPMENT</small></div></header>
+<main>
+<div class="notice"><b>TEST ONLY — FICTIONAL INFORMATION.</b> This page verifies Microsoft sign-in and makes a protected request to the Render development API. All returned jobs are fictional. No live customer data, Smartsheet access, purchasing or SDNR actions are enabled.</div>
+<section id="loginPanel"><p class="eyebrow">MICROSOFT 365</p><h1>Employee sign-in</h1><p class="muted">Only accounts assigned to Edwards Precision Mobile should be able to complete Microsoft authentication. The application also checks the returned tenant and role.</p><div class="card" id="status" role="status" aria-live="polite">Initialising Microsoft sign-in…</div><button class="btn" id="signin" disabled>Sign in with Microsoft 365</button></section>
+<section id="appPanel" hidden>
+<div class="row"><p class="eyebrow" id="roleLabel"></p><span class="tag">DEVELOPMENT</span></div><h1 id="heading">Home</h1><p class="muted" id="subtitle"></p><div id="content"></div>
+</section>
+</main>
+<nav id="nav" hidden aria-label="Main navigation"><button data-page="home" class="active">Home</button><button data-page="jobs">Jobs</button><button data-page="ncr">NCRs</button><button data-page="more">More</button></nav>
+</div>
+<script>
+(function(){
+'use strict';
+const clientId='98e4ea5e-8c04-41da-b85c-875a1ef1c3c9';
+const tenantId='a911bd42-b6dc-4f1f-b8fc-01ae15e707ae';
+const redirectUri='https://julie903.github.io/edwards-precision-mobile-demo/auth-test.html';
+const apiScope='api://4b35375d-ca2d-4c5b-a613-5c8adff8e281/Orders.Read';
+const apiUrl='https://edwards-mobile-backend-dev.onrender.com/api/orders';
+const factoryUrl='https://edwards-mobile-backend-dev.onrender.com/api/my-operations';
+const $=id=>document.getElementById(id);
+let application=null, currentAccount=null, roles=[], screen='home', chosenJob=null;
+let apiJobs=null, apiJobDetails=null, apiMessage='Not loaded', jobFilter='';
+let factoryOperations=null, factoryOperation=null, factoryMessage='Not loaded', chosenOperation=null;
+const jobs=[
+ {wo:'DEMO-1001',part:'Sample turned housing',customer:'Example Customer A',op:'OP20 · Turning',due:'24-11-2026',status:'In progress'},
+ {wo:'DEMO-1002',part:'Sample mounting bracket',customer:'Example Customer B',op:'OP10 · Milling',due:'20-11-2026',status:'Overdue'},
+ {wo:'DEMO-1003',part:'Sample inspection fixture',customer:'Example Customer A',op:'OP30 · Inspection',due:'26-11-2026',status:'Ready'}
+];
+function escapeHTML(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+function status(s){$('status').textContent=s;}
+function roleInfo(){
+ const authoriser=roles.includes('SDNR.Authoriser');
+ const office=authoriser||roles.includes('Office');
+ const factory=roles.includes('Factory');
+ return {authoriser,office,factory,allowed:office||factory,label:authoriser?'SDNR AUTHORISER · OFFICE':office?'OFFICE':factory?'FACTORY':'UNAUTHORISED'};
+}
+function formatDate(v){if(!/^\d{4}-\d{2}-\d{2}$/.test(String(v||'')))return String(v||'');const [y,m,d]=v.split('-');return `${d}-${m}-${y}`;}
+function makeJob(j){return `<article class="card job" tabindex="0" role="button" data-job="${escapeHTML(j.wo)}" aria-label="View ${escapeHTML(j.wo)}"><div class="row"><h2>${escapeHTML(j.wo)}</h2><span class="tag ${j.status==='Overdue'?'warn':''}">${escapeHTML(j.status)}</span></div><p><b>${escapeHTML(j.description||j.part)}</b></p><p>${escapeHTML(j.operationCount!=null?j.operationCount+' operations':j.op)} · Due ${escapeHTML(formatDate(j.dueDate||j.due))}</p></article>`;}
+function makeOperation(op){return `<article class="card job" role="button" tabindex="0" data-operation="${escapeHTML(op.id)}" aria-label="View operation ${escapeHTML(op.id)}"><div class="row"><h2>${escapeHTML(op.op)} · ${escapeHTML(op.description)}</h2><span class="tag">${escapeHTML(op.status)}</span></div><p>${escapeHTML(op.partNumber)} · ${escapeHTML(op.wo)} · Due ${escapeHTML(formatDate(op.dueDate))}</p><p>${escapeHTML(op.machinist)} · ${Number(op.progress)}% complete</p></article>`;}
+
+function filteredJobsHTML(){
+ if(!Array.isArray(apiJobs)) return '';
+ const q=jobFilter.trim().toLowerCase();
+ const shown=apiJobs.filter(j=>[j.wo,j.description,j.partNumber,j.customer].some(v=>String(v||'').toLowerCase().includes(q)));
+ return shown.length?shown.map(makeJob).join(''):'<div class="card"><p>No fictional jobs match your search.</p></div>';
+}
+document.addEventListener('input',ev=>{
+ if(ev.target.id==='jobSearch'){
+   jobFilter=ev.target.value;
+   const list=$('filteredJobs');if(list)list.innerHTML=filteredJobsHTML();
+ }
+});
+
+function render(){
+ const r=roleInfo();
+ $('roleLabel').textContent=r.label;
+ $('heading').textContent=({home:'Good morning',jobs:'Open Orders',detail:'Job details',factory:'Factory operations',operation:'Operation detail',ncr:'Non-conformances',more:'More tools'})[screen];
+ $('subtitle').textContent=(screen==='detail'||screen==='operation')?'Fictional details — read only':`Signed in as ${currentAccount.name||currentAccount.username||'employee'}`;
+ document.querySelectorAll('[data-page]').forEach(b=>b.classList.toggle('active',b.dataset.page===screen));
+ let html='';
+ if(screen==='home') html=`<div class="card"><h2>Microsoft sign-in active</h2><p>${escapeHTML(r.label)} access recognised. Jobs load through the protected Edwards Precision development API.</p><button class="btn" id="openJobs">Open Jobs</button></div><div class="card"><h2>Development status</h2><p>Read-only fictional jobs and operations. Live Smartsheet, documents and NCR actions are not connected.</p></div>`;
+ if(screen==='home' && !r.office) html=`<div class="card"><h2>My assigned operations</h2><p>Open Jobs to load your own fictional operations securely. The full Open Orders list is not available to Factory staff.</p></div>`;
+ if(screen==='jobs' && !r.office) html=`<div class="card"><p>Factory access is limited to operations assigned to your Microsoft account, never the complete Open Orders list.</p><p>${escapeHTML(factoryMessage)}</p><button class="btn" id="loadFactory">Load my demo operations</button></div>`+(Array.isArray(factoryOperations)?factoryOperations.map(makeOperation).join(''):'');
+ if(screen==='jobs' && r.office) html=`<div class="card"><p>${escapeHTML(apiMessage)}</p><button class="btn" id="loadJobs">Refresh authorised demo jobs</button></div>`+(Array.isArray(apiJobs)?`<label for="jobSearch" class="quiet">Search fictional jobs by WO, part or customer</label><input id="jobSearch" class="search" type="search" placeholder="Search jobs" value="${escapeHTML(jobFilter)}" autocomplete="off"><div id="filteredJobs">${filteredJobsHTML()}</div>`:'');
+ if(screen==='detail'){
+  const j=apiJobDetails && apiJobDetails.wo===chosenJob ? apiJobDetails : null;
+  html=`<button class="back" id="back">← Back to Jobs</button>`;
+  if (!j) html+=`<div class="card"><p>${escapeHTML(apiMessage)}</p></div>`;
+  else html+=`<div class="card"><h2>${escapeHTML(j.wo)}</h2><p><b>Part:</b> ${escapeHTML(j.partNumber)} · Rev ${escapeHTML(j.revision)}</p><p><b>Description:</b> ${escapeHTML(j.description)}</p><p><b>Customer:</b> ${escapeHTML(j.customer)}</p><p><b>Due:</b> ${escapeHTML(formatDate(j.dueDate))}</p><p><b>Status:</b> ${escapeHTML(j.status)}</p></div><h2>Operations</h2>${j.operations.map(op=>`<div class="card"><div class="row"><h2>${escapeHTML(op.op)} · ${escapeHTML(op.description)}</h2><span class="tag">${escapeHTML(op.status)}</span></div><p>Machinist: ${escapeHTML(op.machinist)}</p><p>Progress: ${Number(op.progress)}%</p><progress max="100" value="${Number(op.progress)}" style="width:100%"></progress></div>`).join('')}<p class="quiet">Fictional, read-only job details supplied by protected Render API.</p>`;
+ }
+ if(screen==='factory') html=`<div class="card"><p>Fictional Factory Operations preview. The protected API independently checks Office or Factory authorisation.</p><p>${escapeHTML(factoryMessage)}</p><button class="btn" id="loadFactory">Load fictional operations</button></div>`+(Array.isArray(factoryOperations)?factoryOperations.map(makeOperation).join(''):'');
+ if(screen==='operation') {
+  const op=factoryOperation && factoryOperation.id===chosenOperation?factoryOperation:null;
+  html=`<button class="back" id="backOperations">← Back to operations</button>`;
+  if(!op) html+=`<div class="card"><p>${escapeHTML(factoryMessage)}</p></div>`;
+  else html+=`<div class="card"><h2>${escapeHTML(op.id)}</h2><p><b>Part:</b> ${escapeHTML(op.partNumber)} · Rev ${escapeHTML(op.revision)}</p><p><b>Operation:</b> ${escapeHTML(op.op)} · ${escapeHTML(op.description)}</p><p><b>Assigned machinist:</b> ${escapeHTML(op.machinist)}</p><p><b>Due:</b> ${escapeHTML(formatDate(op.dueDate))}</p><p><b>Status:</b> ${escapeHTML(op.status)}</p><p><b>Progress:</b> ${Number(op.progress)}%</p><progress max="100" value="${Number(op.progress)}" style="width:100%"></progress></div><p class="quiet">No drawing attachments, live jobs, time recording or status editing are enabled.</p>`;
+ }
+ if(screen==='ncr') html=`<div class="card"><h2>${r.office?'Office NCR review':'Factory NCR reporting'}</h2><p>${r.authoriser?'SDNR approval would be available to your authorised account only after the protected backend independently checks your identity and permissions.':r.office?'You may review NCRs but not issue SDNRs.':'Factory staff can raise NCRs and record actions for each defect in the future live system.'}</p><button class="btn" disabled>${r.authoriser?'Issue SDNR — disabled':r.office?'Review NCR — disabled':'Raise NCR — disabled'}</button></div>`;
+ if(screen==='more') html=`<div class="card"><h2>Account</h2><p class="idline">${escapeHTML(currentAccount.username||'')}</p><p class="idline">Assigned claims: ${escapeHTML(roles.join(', '))}</p></div><div class="card"><h2>Access</h2><p>${r.office?'Office preview available':'Office preview unavailable'}</p><p>${r.factory?'Factory role assigned':r.authoriser?'Office functions inherited through authoriser policy':'Factory role not assigned'}</p><p>All live data and write actions remain disabled.</p></div>${r.office?'<div class="card"><h2>Factory operations preview</h2><p>Fictional API records only. This does not grant a Factory employee Office permissions.</p><button class="btn" id="previewFactory">Open Factory operations preview</button></div>':''}<div class="card"><h2>Private iMac authentication check</h2><p>Check your Microsoft Office permissions through private NetBird HTTPS. No customer records or Smartsheet access.</p><button class="btn" id="testPrivateAuth">Check private Microsoft access</button><p id="privateAuthResult" role="status" aria-live="polite">Not tested</p></div><div class="card"><h2>Protected Render API test</h2><p>Request an API token from Microsoft and test the development endpoint. Tokens are never displayed.</p><button class="btn" id="testApi">Test Microsoft API connection</button><p id="apiResult" role="status" aria-live="polite">Not tested</p></div><button class="btn secondary" id="signout">Sign out of Microsoft 365 test</button>`;
+ $('content').innerHTML=html;
+}
+async function authorisedGet(path){
+ if(!application || !currentAccount)throw Error('Sign in first');
+ let token;
+ try {token=await application.acquireTokenSilent({account:currentAccount,scopes:[apiScope]});}
+ catch(e){
+  if(e instanceof msal.InteractionRequiredAuthError || ['interaction_required','consent_required','login_required'].includes(e.errorCode)){
+   await application.acquireTokenRedirect({account:currentAccount,scopes:[apiScope]});
+   return null;
+  }
+  throw e;
+ }
+ const response=await fetch(apiUrl+path,{method:'GET',mode:'cors',cache:'no-store',headers:{Authorization:'Bearer '+token.accessToken}});
+ let body={};try{body=await response.json();}catch{}
+ if(!response.ok)throw Error('HTTP '+response.status+' — '+(typeof body.error==='string'?body.error:'API request failed'));
+ if(body.fictional!==true || body.liveData!==false || body.readOnly!==true)throw Error('Unexpected data mode; response rejected');
+ return body;
+}
+async function authorisedFactoryGet(path){
+ if(!application || !currentAccount)throw Error('Sign in first');
+ let token;
+ try {token=await application.acquireTokenSilent({account:currentAccount,scopes:[apiScope]});}
+ catch(e){
+  if(e instanceof msal.InteractionRequiredAuthError || ['interaction_required','consent_required','login_required'].includes(e.errorCode)){
+   await application.acquireTokenRedirect({account:currentAccount,scopes:[apiScope]});return null;
+  }
+  throw e;
+ }
+ const response=await fetch(factoryUrl+path,{method:'GET',mode:'cors',cache:'no-store',headers:{Authorization:'Bearer '+token.accessToken}});
+ let body={};try{body=await response.json();}catch{}
+ if(!response.ok)throw Error('HTTP '+response.status+' — '+(typeof body.error==='string'?body.error:'API request failed'));
+ if(body.fictional!==true || body.liveData!==false || body.readOnly!==true)throw Error('Unexpected response; refused');
+ return body;
+}
+async function loadFactory(){
+ factoryMessage='Loading protected fictional operations…';render();
+ try{const body=await authorisedFactoryGet('');if(!body)return;factoryOperations=body.operations;factoryMessage=body.count?body.count+' operations from protected API'+(body.preview?' (Office preview)':''):'No operations assigned to your account';}
+ catch(e){factoryOperations=null;factoryMessage=e.message||'Unable to load operations';}
+ render();
+}
+async function loadFactoryDetail(id){
+ factoryOperation=null;factoryMessage='Loading operation…';render();
+ try{const body=await authorisedFactoryGet('/'+encodeURIComponent(id));if(!body)return;factoryOperation=body.operation;factoryMessage='Operation loaded';}
+ catch(e){factoryMessage=e.message||'Unable to load operation';}
+ render();
+}
+async function loadJobs(){
+ apiMessage='Loading authorised fictional jobs…';render();
+ try{const body=await authorisedGet('');if(!body)return;apiJobs=body.jobs;jobFilter='';apiMessage=body.count+' fictional jobs received from protected API';}
+ catch(e){apiJobs=null;apiMessage=e.message||'Unable to load jobs';}
+ render();
+}
+async function loadDetail(wo){
+ apiMessage='Loading job details…';apiJobDetails=null;render();
+ try{const body=await authorisedGet('/'+encodeURIComponent(wo));if(!body)return;apiJobDetails=body.job;apiMessage='Job details loaded';}
+ catch(e){apiMessage=e.message||'Unable to load job details';}
+ render();
+}
+function showSignedIn(account){
+ const claims=account.idTokenClaims||{};
+ // Do not rely on the username or text visible in the UI as authorisation evidence.
+ if(claims.tid!==tenantId){status('Access denied: account is not from the Edwards Precision tenant.');return;}
+ roles=Array.isArray(claims.roles)?claims.roles:[];
+ const recognised=roles.some(r=>['Office','Factory','SDNR.Authoriser'].includes(r));
+ if(!recognised){status('Signed in, but no Edwards Precision Mobile app role was returned. Access denied.');return;}
+ currentAccount=account;
+ $('loginPanel').hidden=true;$('appPanel').hidden=false;$('nav').hidden=false;
+ render();
+}
+document.addEventListener('click',async ev=>{
+ const nav=ev.target.closest('[data-page]');if(nav&&currentAccount){screen=nav.dataset.page;chosenJob=null;chosenOperation=null;render();return;}
+ if(ev.target.id==='openJobs'&&currentAccount){screen='jobs';render();return;}
+ if(ev.target.id==='previewFactory'&&currentAccount){screen='factory';render();return;}
+ if(ev.target.id==='loadFactory'&&currentAccount){await loadFactory();return;}
+ if(ev.target.id==='backOperations'){screen=roleInfo().office?'factory':'jobs';render();return;}
+ const operation=ev.target.closest('[data-operation]');
+ if(operation&&currentAccount){chosenOperation=operation.dataset.operation;screen='operation';await loadFactoryDetail(chosenOperation);return;}
+ const job=ev.target.closest('[data-job]');if(job&&currentAccount&&roleInfo().office){chosenJob=job.dataset.job;screen='detail';await loadDetail(chosenJob);return;}
+ if(ev.target.id==='loadJobs'&&currentAccount&&roleInfo().office){await loadJobs();return;}
+ if(ev.target.id==='back'){screen='jobs';render();return;}
+ if(ev.target.id==='testPrivateAuth'&&application&&currentAccount){
+  const button=ev.target;const output=$('privateAuthResult');
+  button.disabled=true;output.textContent='Checking private Microsoft permissions…';
+  try{
+    if(!roleInfo().office){output.textContent='Office authorisation unavailable for this account.';return;}
+    if(window.location.origin!=='https://julie903.github.io'||window.location.pathname!=='/edwards-precision-mobile-demo/auth-test.html'){
+      output.textContent='Refused: this test must run at the registered Edwards Precision iPhone address.';return;
+    }
+    let result;
+    try{result=await application.acquireTokenSilent({account:currentAccount,scopes:[apiScope]});}
+    catch(e){
+      if(e instanceof msal.InteractionRequiredAuthError || ['interaction_required','consent_required','login_required'].includes(e.errorCode)){
+        output.textContent='Microsoft interaction required. Returning to sign-in…';
+        await application.acquireTokenRedirect({account:currentAccount,scopes:[apiScope]});return;
+      }
+      throw e;
+    }
+    const response=await fetch('https://mobile.edwardsprecision.co.uk:9444/auth/check',{method:'GET',mode:'cors',cache:'no-store',redirect:'error',referrerPolicy:'no-referrer',headers:{Authorization:'Bearer '+result.accessToken}});
+    let body={};try{body=await response.json();}catch{}
+    if(response.status===200&&body.status==='ok'&&body.authenticated===true&&body.officeAccess===true&&body.liveDataEnabled===false&&body.mode==='auth-check'){
+      output.textContent='PASS — private Microsoft API accepted your Office permissions. Live orders remain disabled.';
+    }else if(response.status===403){
+      output.textContent='DENIED (403) — Office or designated SDNR Authoriser permission was not accepted. No data accessed.';
+    }else if(response.status===401){
+      output.textContent='DENIED (401) — Microsoft access token rejected. No data accessed.';
+    }else if(response.status===503){
+      output.textContent='NOT READY (503) — private authentication test not configured. No data accessed.';
+    }else{
+      output.textContent='Unexpected private API response: HTTP '+response.status+'. No data accessed.';
+    }
+  }catch(e){
+    output.textContent='Check could not complete: '+(e instanceof TypeError?'private network or browser access error':(e.errorCode||'Microsoft sign-in error'))+'. No tokens displayed.';
+  }finally{button.disabled=false;}
+  return;
+ }
+ if(ev.target.id==='testApi'&&application&&currentAccount){
+  const button=ev.target;const output=$('apiResult');
+  button.disabled=true;output.textContent='Requesting Microsoft API permission…';
+  try {
+    let result;
+    try {result=await application.acquireTokenSilent({account:currentAccount,scopes:[apiScope]});}
+    catch(e){
+      if(e instanceof msal.InteractionRequiredAuthError || ['interaction_required','consent_required','login_required'].includes(e.errorCode)){
+        output.textContent='Microsoft interaction required. Returning to Microsoft sign-in…';
+        await application.acquireTokenRedirect({account:currentAccount,scopes:[apiScope]});return;
+      }
+      throw e;
+    }
+    const response=await fetch(apiUrl,{method:'GET',mode:'cors',cache:'no-store',headers:{Authorization:'Bearer '+result.accessToken}});
+    let body={};try{body=await response.json();}catch{}
+    // Never display an access token or log the raw Microsoft response.
+    if(response.ok && body.fictional===true && body.liveData===false){
+      output.textContent='PASS — '+response.status+'; Microsoft API access accepted. '+Number(body.count||0)+' fictional jobs returned. No live data.';
+    }else{
+      const description=typeof body.error==='string'?body.error:'Unexpected API response';
+      output.textContent='HTTP '+response.status+' — '+description+'. No jobs displayed.';
+    }
+  } catch(e){
+    output.textContent='Test could not complete: '+(e instanceof TypeError?'Network or CORS connection error':(e.errorCode||e.message||'Unknown error'))+'. No access token displayed.';
+  }finally{button.disabled=false;}
+  return;
+ }
+ if(ev.target.id==='signout'&&application){ev.target.disabled=true;try{await application.logoutRedirect({account:application.getActiveAccount(),postLogoutRedirectUri:redirectUri});}catch(e){ev.target.disabled=false;alert('Sign-out could not start: '+(e.errorCode||e.message||'Unknown error'));}}
+});
+document.addEventListener('keydown',ev=>{if((ev.key==='Enter'||ev.key===' ')&&ev.target.matches('[data-job], [data-operation]')){ev.preventDefault();ev.target.click();}});
+window.addEventListener('load',async()=>{
+ if(typeof msal==='undefined'){status('Microsoft authentication library unavailable. Check network access or content blockers.');return;}
+ try{
+  application=new msal.PublicClientApplication({auth:{clientId,authority:'https://login.microsoftonline.com/'+tenantId,redirectUri,navigateToLoginRequestUrl:false},cache:{cacheLocation:'sessionStorage',storeAuthStateInCookie:false}});
+  const result=await application.handleRedirectPromise();
+  const account=(result&&result.account)||application.getAllAccounts()[0]||null;
+  if(account){application.setActiveAccount(account);showSignedIn(account);}else{status('Not signed in. Select the button to sign in with your Edwards Precision work account.');}
+  $('signin').disabled=false;
+  $('signin').addEventListener('click',async()=>{
+   $('signin').disabled=true;status('Opening Microsoft sign-in…');
+   try{await application.loginRedirect({scopes:['openid','profile'],prompt:'select_account'});}catch(e){status('Could not start sign-in: '+(e.errorCode||e.message||'Unknown error'));$('signin').disabled=false;}
+  });
+ }catch(e){status('Authentication error: '+(e.errorCode||e.message||'Unknown error'));$('signin').disabled=false;}
+});
+})();
+</script>
+<script>if('serviceWorker' in navigator){navigator.serviceWorker.register('./sw.js').catch(()=>{});}</script>
+</body>
+</html>
