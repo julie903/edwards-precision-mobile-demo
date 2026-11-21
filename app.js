@@ -1,0 +1,39 @@
+/* Visual prototype only. Never use client-side role state for authorisation. */
+const jobs=[{wo:'DEMO-1001',part:'Sample turned housing',customer:'Example Customer A',due:'24-11-2026',progress:75,status:'In progress',op:'OP20 · Turning'},{wo:'DEMO-1002',part:'Sample mounting bracket',customer:'Example Customer B',due:'20-11-2026',progress:40,status:'Overdue',op:'OP10 · Milling'},{wo:'DEMO-1003',part:'Sample inspection fixture',customer:'Example Customer A',due:'26-11-2026',progress:100,status:'Ready',op:'OP30 · Inspection'}];
+let role='office',page='home',query='';const $=s=>document.querySelector(s), screen=$('#screen');
+const e=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const card=j=>`<article class="job"><div class="jobtop"><b>${e(j.wo)}</b><span class="tag ${j.status==='Overdue'?'late':j.status==='In progress'?'work':''}">${e(j.status)}</span></div><p><strong>${e(j.part)}</strong><br>${e(j.customer)}</p><div class="bar"><i style="width:${j.progress}%"></i></div><div class="jobfoot"><span>${e(j.op)}</span><span>Due ${e(j.due)}</span></div></article>`;
+function render(){const office=role==='office';const stats=office?[['3','Open jobs',''],['1','Overdue','warn'],['1','Ready to book out','ok'],['1','NCR for review','']]:[['3','Visible jobs',''],['1','In progress',''],['1','Ready for inspection','ok'],['0','Open NCRs','']];$('#roleLabel').textContent=office?'OFFICE VIEW':'FACTORY VIEW';$('#profile').textContent=office?'O':'F';$('#heading').textContent=({home:office?'Good morning':'Production overview',orders:'Open Orders',ncr:'Non-conformances',more:'More tools'})[page];$('#subtitle').textContent=({home:office?'Your production snapshot':'Jobs and operations at a glance',orders:'Demonstration records — not live Smartsheet data',ncr:'Prototype access and permissions',more:'Features planned for future releases'})[page];document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('active',b.dataset.page===page));
+if(page==='home'){screen.innerHTML=`<div class="cards">${stats.map(s=>`<div class="stat ${s[2]}"><div class="num">${s[0]}</div><div class="label">${s[1]}</div></div>`).join('')}</div><div class="sectionhead"><h2>${office?'Jobs needing attention':'Current operations'}</h2><button class="link" data-go="orders">View all →</button></div>${jobs.slice(0,2).map(card).join('')}<div class="sectionhead"><h2>Quick actions</h2></div><div class="actions"><button class="action" data-go="orders"><span>▤</span>Open Orders</button><button class="action" data-go="ncr"><span>⚑</span>${office?'Review NCRs':'Raise an NCR'}</button><button class="action" data-go="more"><span>▣</span>Drawings</button><button class="action" data-go="more"><span>◷</span>Part History</button></div>`}
+if(page==='orders'){screen.innerHTML=`<input class="search" id="search" placeholder="Search WO, customer or part" value="${e(query)}" aria-label="Search sample jobs"><div id="joblist"></div>`;$('#search').addEventListener('input',ev=>{query=ev.target.value;renderJobs()});renderJobs()}
+if(page==='ncr'){screen.innerHTML=`<div class="empty"><h2>${office?'Office NCR review':'Factory NCR submission'}</h2><p>${office?'The live version will let authorised reviewers review submissions. Only Julie’s authorised account may approve, sign and issue an SDNR.':'The live version will let operators report a defect and record corrective/preventative actions for each defect.'}</p><p>Creation, approvals, numbering and notifications are disabled in this prototype.</p><button class="btn" disabled>${office?'Approve SDNR — not connected':'Submit NCR — not connected'}</button></div>`}
+if(page==='more'){screen.innerHTML=`<div class="listrow"><div><b>Job documents</b><br><span>Drawings, job cards, attachments</span></div>○</div><div class="listrow"><div><b>Part History</b><br><span>Role-limited lookup</span></div>○</div>${office?'<div class="listrow"><div><b>Financial overview</b><br><span>Restricted to authorised Office users</span></div>○</div>':''}<div class="listrow"><div><b>Account and security</b><br><span>Microsoft work sign-in required before launch</span></div>○</div><div class="empty" style="margin-top:18px">These are feature placeholders. This package does not access Smartsheet, QuickBooks, Microsoft 365 or production data.</div>`}
+}
+function renderJobs(){const filtered=jobs.filter(j=>[j.wo,j.part,j.customer].some(x=>x.toLowerCase().includes(query.toLowerCase())));$('#joblist').innerHTML=filtered.length?filtered.map(card).join(''):'<div class="empty">No matching sample jobs.</div>'}
+document.addEventListener('click',ev=>{const g=ev.target.closest('[data-go]');if(g){page=g.dataset.go;render()}const nav=ev.target.closest('[data-page]');if(nav){page=nav.dataset.page;render()}});$('#profile').addEventListener('click',()=>{if(confirm('Sign out of Edwards Precision Mobile?')) location.assign('/.auth/logout');});
+async function boot(){
+  try {
+    const response=await fetch('/.auth/me',{credentials:'same-origin',cache:'no-store'});
+    if(!response.ok) throw new Error('No verified session');
+    const result=await response.json();
+    const principal=result.clientPrincipal;
+    const roles=Array.isArray(principal?.userRoles)?principal.userRoles:[];
+    const hasOffice=roles.includes('office');
+    const hasFactory=roles.includes('factory');
+    if(!hasOffice&&!hasFactory) throw new Error('Your account has not been assigned an Office or Factory mobile role. Ask the app administrator for access.');
+    role=hasOffice?'office':'factory';
+    $('#profile').textContent=role==='office'?'O':'F';
+    render();
+  } catch (err) {
+    document.querySelector('nav').style.display='none';
+    $('#roleLabel').textContent='ACCESS NOT GRANTED';
+    $('#heading').textContent='Unable to open mobile demo';
+    $('#subtitle').textContent='Microsoft work account required';
+    screen.replaceChildren();
+    const message=document.createElement('div');message.className='empty';
+    message.textContent=err.message||'Authentication could not be verified.';
+    screen.appendChild(message);
+  }
+}
+boot();
+// Deliberately no service worker caching authenticated content: none exists in this prototype.
