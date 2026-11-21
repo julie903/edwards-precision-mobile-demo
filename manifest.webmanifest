@@ -1,8 +1,8 @@
 {
-  "name": "Edwards Precision Mobile \u2014 Public Demo",
+  "name": "Edwards Precision Mobile \u2014 Protected Development",
   "short_name": "Edwards Mobile",
-  "description": "Public, fictional-data-only screen prototype. No authentication or live integrations.",
-  "start_url": "./index.html",
+  "description": "Microsoft-authenticated development app with fictional read-only data",
+  "start_url": "./auth-test.html",
   "scope": "./",
   "id": "./index.html",
   "display": "standalone",
