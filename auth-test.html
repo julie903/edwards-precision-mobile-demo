@@ -1,87 +1,107 @@
 <!doctype html>
 <html lang="en-GB">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="robots" content="noindex, nofollow">
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#142c40"><meta name="robots" content="noindex,nofollow">
 <meta http-equiv="Cache-Control" content="no-store">
-<title>Edwards Precision Mobile — Microsoft Sign-in Test</title>
+<title>Edwards Precision Mobile — Role Test</title>
 <style>
-:root{color-scheme:light;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;color:#14293d;background:#eaf1f7}
-*{box-sizing:border-box}body{margin:0;padding:24px 14px}.frame{max-width:520px;margin:0 auto;background:#f7fafc;border-radius:18px;overflow:hidden;min-height:70vh;box-shadow:0 8px 40px #102c4015}
-header{background:#132c42;color:#fff;padding:20px 24px;font-size:16px;font-weight:700;letter-spacing:1px}.sub{font-size:11px;letter-spacing:2px;color:#8facbf;margin-top:4px}
-main{padding:24px}.notice{background:#fff6e7;border:1px solid #e4bf70;padding:12px;border-radius:10px;font-size:13px;line-height:1.5;margin-bottom:22px}
-h1{font-size:23px;margin:0 0 8px}.muted{color:#587084;font-size:14px;line-height:1.5}.status{background:#fff;border:1px solid #dbe5ed;border-radius:12px;padding:15px;line-height:1.5;margin:16px 0;overflow-wrap:anywhere}
-button{width:100%;background:#117298;color:white;border:0;border-radius:10px;font-size:16px;font-weight:600;padding:14px;margin:8px 0;cursor:pointer}button.secondary{background:white;border:1px solid #9fb3c2;color:#193c50}button:disabled{opacity:.5;cursor:not-allowed}
-.label{font-size:12px;text-transform:uppercase;letter-spacing:1px;color:#587084;font-weight:700}.value{margin:4px 0 16px;font-size:14px;overflow-wrap:anywhere}
-footer{font-size:12px;color:#587084;line-height:1.5;margin-top:28px}
+:root{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;color:#142c40;background:#eaf1f7;color-scheme:light}
+[hidden]{display:none!important}*{box-sizing:border-box}body{margin:0;padding:16px 9px}.app{max-width:530px;min-height:85vh;margin:0 auto;background:#f7fafc;border-radius:18px;box-shadow:0 8px 35px #142c4014;overflow:hidden;display:flex;flex-direction:column}
+header{background:#142c40;color:#fff;padding:18px 20px;display:flex;align-items:center;gap:10px}.mark{background:#237b9c;border-radius:10px;padding:10px;font-size:15px;font-weight:800}header strong{font-size:13px;letter-spacing:1.5px}header small{display:block;color:#9bb5c8;font-size:10px;letter-spacing:2px;margin-top:3px}
+main{padding:17px;flex:1}.notice{font-size:12px;background:#fff7e8;color:#795621;border:1px solid #e6bf71;border-radius:10px;line-height:1.55;padding:12px;margin-bottom:20px}
+.eyebrow{font-size:11px;color:#297b9e;font-weight:800;letter-spacing:1.5px;margin:0 0 7px}h1{font-size:24px;letter-spacing:-.7px;margin:0 0 8px}.muted{font-size:13px;line-height:1.5;color:#607487}.card{background:#fff;border:1px solid #dfe8ef;border-radius:12px;padding:15px;margin:11px 0}.card h2{font-size:16px;margin:0 0 8px}.card p{font-size:13px;line-height:1.5;margin:5px 0;color:#546d80}.row{display:flex;align-items:center;justify-content:space-between;gap:10px}.tag{background:#e7f2f8;color:#216e90;font-weight:750;font-size:11px;padding:5px 8px;border-radius:7px}.tag.warn{background:#fff0e8;color:#ad5b33}
+.btn{background:#19769a;border:0;color:#fff;font-size:15px;font-weight:700;padding:13px 16px;border-radius:10px;cursor:pointer;width:100%;margin-top:10px}.btn.secondary{background:#fff;border:1px solid #aec5d2;color:#1d526c}.btn:disabled{opacity:.55;cursor:not-allowed}
+nav{display:flex;border-top:1px solid #dde7ed;background:#fff;position:sticky;bottom:0}nav button{flex:1;background:transparent;border:0;padding:14px 4px;color:#63798d;font-weight:650;font-size:13px;cursor:pointer}nav button.active{color:#147699;border-top:3px solid #147699;padding-top:11px}
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:15px}.stat{background:#fff;border:1px solid #dde7ee;padding:15px;border-radius:12px}.stat b{display:block;font-size:24px}.stat span{font-size:12px;color:#677b8a}.job{cursor:pointer}.job:focus-visible{outline:3px solid #147699}.back{background:none;border:0;color:#147699;font-weight:700;font-size:14px;padding:10px 0;cursor:pointer}
+#status{overflow-wrap:anywhere}.idline{font-size:12px;word-break:break-word;color:#4c667a}.quiet{font-size:12px;color:#718391}.hide{display:none!important}
 </style>
 <script src="https://alcdn.msauth.net/browser/2.35.0/js/msal-browser.min.js" defer></script>
 </head>
 <body>
-<div class="frame"><header>EDWARDS PRECISION<div class="sub">MOBILE · SIGN-IN TEST</div></header>
+<div class="app"><header><div class="mark">EP</div><div><strong>EDWARDS PRECISION</strong><small>MOBILE · AUTHENTICATED TEST</small></div></header>
 <main>
-<div class="notice"><strong>Authentication test only.</strong> This public test page does not access Smartsheet, QuickBooks, drawings or company files. It is not the live employee app.</div>
-<h1>Microsoft 365 sign-in</h1><p class="muted">Check that Microsoft recognises your Edwards Precision account and assigned application role.</p>
-<div class="status" id="status" role="status" aria-live="polite">Initialising sign-in test…</div>
-<section id="identity" hidden>
-<div class="label">Signed-in account</div><div class="value" id="user"></div>
-<div class="label">Assigned app roles (from ID token)</div><div class="value" id="roles"></div>
+<div class="notice"><b>TEST ONLY — FICTIONAL INFORMATION.</b> This page verifies Microsoft sign-in and previews role-based screens. It is publicly hosted code, not a secure data backend. No customer data, Smartsheet access, purchasing or SDNR actions are enabled.</div>
+<section id="loginPanel"><p class="eyebrow">MICROSOFT 365</p><h1>Employee sign-in</h1><p class="muted">Only accounts assigned to Edwards Precision Mobile should be able to complete Microsoft authentication. The application also checks the returned tenant and role.</p><div class="card" id="status" role="status" aria-live="polite">Initialising Microsoft sign-in…</div><button class="btn" id="signin" disabled>Sign in with Microsoft 365</button></section>
+<section id="appPanel" hidden>
+<div class="row"><p class="eyebrow" id="roleLabel"></p><span class="tag">TEST</span></div><h1 id="heading">Home</h1><p class="muted" id="subtitle"></p><div id="content"></div>
 </section>
-<button id="signin" disabled>Sign in with Microsoft 365</button>
-<button id="signout" class="secondary" hidden>Sign out of this test</button>
-<footer>Never enter passwords into this page. Microsoft's own login page handles credentials. A successful sign-in is not proof that backend permissions are implemented.</footer>
-</main></div>
+</main>
+<nav id="nav" hidden aria-label="Main navigation"><button data-page="home" class="active">Home</button><button data-page="jobs">Jobs</button><button data-page="ncr">NCRs</button><button data-page="more">More</button></nav>
+</div>
 <script>
 (function(){
-  'use strict';
-  const clientId = '98e4ea5e-8c04-41da-b85c-875a1ef1c3c9';
-  const tenantId = 'a911bd42-b6dc-4f1f-b8fc-01ae15e707ae';
-  const redirectUri = 'https://julie903.github.io/edwards-precision-mobile-demo/auth-test.html';
-  const $ = id => document.getElementById(id);
-  const show = (message) => { $('status').textContent = message; };
-  const signInBtn = $('signin');
-  const signOutBtn = $('signout');
-  function renderAccount(account, result){
-    if(!account){
-      $('identity').hidden=true;signInBtn.hidden=false;signOutBtn.hidden=true;
-      show('Not signed in. Select the button below to start the Microsoft sign-in test.');return;
-    }
-    $('identity').hidden=false;signInBtn.hidden=true;signOutBtn.hidden=false;
-    $('user').textContent = account.username || account.name || 'Signed in';
-    const claims = (result && result.idTokenClaims) || account.idTokenClaims || {};
-    const roles = Array.isArray(claims.roles) ? claims.roles : [];
-    $('roles').textContent = roles.length ? roles.join(', ') : 'No app role returned in this session';
-    show('Microsoft sign-in completed. Check the displayed role below.');
-  }
-  window.addEventListener('load', async () => {
-    if(typeof msal === 'undefined'){
-      show('Microsoft sign-in library did not load. Check your connection or content blockers.');return;
-    }
-    try{
-      const application = new msal.PublicClientApplication({
-        auth: { clientId, authority: 'https://login.microsoftonline.com/' + tenantId, redirectUri, navigateToLoginRequestUrl:false },
-        cache: { cacheLocation:'sessionStorage', storeAuthStateInCookie:false }
-      });
-      const result = await application.handleRedirectPromise();
-      const account = (result && result.account) || application.getAllAccounts()[0] || null;
-      if(account) application.setActiveAccount(account);
-      renderAccount(account, result);
-      signInBtn.disabled=false;
-      signInBtn.addEventListener('click', async () => {
-        signInBtn.disabled=true; show('Opening Microsoft sign-in…');
-        try { await application.loginRedirect({scopes:['openid','profile'],prompt:'select_account'}); }
-        catch(error){ show('Sign-in could not start: '+(error.errorCode||error.message||'Unknown error'));signInBtn.disabled=false; }
-      });
-      signOutBtn.addEventListener('click', async () => {
-        signOutBtn.disabled=true;
-        try { await application.logoutRedirect({account:application.getActiveAccount(),postLogoutRedirectUri:redirectUri}); }
-        catch(error){ show('Sign-out could not start: '+(error.errorCode||error.message||'Unknown error'));signOutBtn.disabled=false; }
-      });
-    }catch(error){
-      show('Sign-in setup error: ' + (error.errorCode||error.message||'Unknown error'));
-    }
+'use strict';
+const clientId='98e4ea5e-8c04-41da-b85c-875a1ef1c3c9';
+const tenantId='a911bd42-b6dc-4f1f-b8fc-01ae15e707ae';
+const redirectUri='https://julie903.github.io/edwards-precision-mobile-demo/auth-test.html';
+const $=id=>document.getElementById(id);
+let application=null, currentAccount=null, roles=[], screen='home', chosenJob=null;
+const jobs=[
+ {wo:'DEMO-1001',part:'Sample turned housing',customer:'Example Customer A',op:'OP20 · Turning',due:'24-11-2026',status:'In progress'},
+ {wo:'DEMO-1002',part:'Sample mounting bracket',customer:'Example Customer B',op:'OP10 · Milling',due:'20-11-2026',status:'Overdue'},
+ {wo:'DEMO-1003',part:'Sample inspection fixture',customer:'Example Customer A',op:'OP30 · Inspection',due:'26-11-2026',status:'Ready'}
+];
+function escapeHTML(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+function status(s){$('status').textContent=s;}
+function roleInfo(){
+ const authoriser=roles.includes('SDNR.Authoriser');
+ const office=authoriser||roles.includes('Office');
+ const factory=roles.includes('Factory');
+ return {authoriser,office,factory,allowed:office||factory,label:authoriser?'SDNR AUTHORISER · OFFICE':office?'OFFICE':factory?'FACTORY':'UNAUTHORISED'};
+}
+function makeJob(j){return `<article class="card job" tabindex="0" role="button" data-job="${escapeHTML(j.wo)}" aria-label="View ${escapeHTML(j.wo)}"><div class="row"><h2>${escapeHTML(j.wo)}</h2><span class="tag ${j.status==='Overdue'?'warn':''}">${escapeHTML(j.status)}</span></div><p><b>${escapeHTML(j.part)}</b></p><p>${escapeHTML(j.op)} · Due ${escapeHTML(j.due)}</p></article>`;}
+function render(){
+ const r=roleInfo();
+ $('roleLabel').textContent=r.label;
+ $('heading').textContent=({home:'Good morning',jobs:'Open Orders',detail:'Job details',ncr:'Non-conformances',more:'More tools'})[screen];
+ $('subtitle').textContent=screen==='detail'?'Example job details — read only':`Signed in as ${currentAccount.name||currentAccount.username||'employee'}`;
+ document.querySelectorAll('[data-page]').forEach(b=>b.classList.toggle('active',b.dataset.page===screen));
+ let html='';
+ if(screen==='home') html=`<div class="stats"><div class="stat"><b>3</b><span>Sample jobs</span></div><div class="stat"><b>1</b><span>Sample overdue</span></div></div><div class="card"><h2>Role recognised</h2><p>${escapeHTML(r.label)}</p><p>Office and Factory screens are derived from Microsoft's role claim, not an editable switch.</p></div><h2>Jobs needing attention</h2>${jobs.slice(0,2).map(makeJob).join('')}`;
+ if(screen==='jobs') html=jobs.map(makeJob).join('');
+ if(screen==='detail'){
+  const j=jobs.find(x=>x.wo===chosenJob);
+  if(!j){screen='jobs';render();return;}
+  html=`<button class="back" id="back">← Back to Jobs</button><div class="card"><h2>${escapeHTML(j.wo)}</h2><p>${escapeHTML(j.part)}</p><p><b>Customer:</b> ${escapeHTML(j.customer)}</p><p><b>Due:</b> ${escapeHTML(j.due)}</p><p><b>Operation:</b> ${escapeHTML(j.op)}</p><p><b>Status:</b> ${escapeHTML(j.status)}</p></div><p class="quiet">Fictional demonstration record. No changes can be submitted.</p>`;
+ }
+ if(screen==='ncr') html=`<div class="card"><h2>${r.office?'Office NCR review':'Factory NCR reporting'}</h2><p>${r.authoriser?'SDNR approval would be available to your authorised account only after the protected backend independently checks your identity and permissions.':r.office?'You may review NCRs but not issue SDNRs.':'Factory staff can raise NCRs and record actions for each defect in the future live system.'}</p><button class="btn" disabled>${r.authoriser?'Issue SDNR — disabled':r.office?'Review NCR — disabled':'Raise NCR — disabled'}</button></div>`;
+ if(screen==='more') html=`<div class="card"><h2>Account</h2><p class="idline">${escapeHTML(currentAccount.username||'')}</p><p class="idline">Assigned claims: ${escapeHTML(roles.join(', '))}</p></div><div class="card"><h2>Access</h2><p>${r.office?'Office preview available':'Office preview unavailable'}</p><p>${r.factory?'Factory role assigned':r.authoriser?'Office functions inherited through authoriser policy':'Factory role not assigned'}</p><p>All live data and write actions remain disabled.</p></div><button class="btn secondary" id="signout">Sign out of Microsoft 365 test</button>`;
+ $('content').innerHTML=html;
+}
+function showSignedIn(account){
+ const claims=account.idTokenClaims||{};
+ // Do not rely on the username or text visible in the UI as authorisation evidence.
+ if(claims.tid!==tenantId){status('Access denied: account is not from the Edwards Precision tenant.');return;}
+ roles=Array.isArray(claims.roles)?claims.roles:[];
+ const recognised=roles.some(r=>['Office','Factory','SDNR.Authoriser'].includes(r));
+ if(!recognised){status('Signed in, but no Edwards Precision Mobile app role was returned. Access denied.');return;}
+ currentAccount=account;
+ $('loginPanel').hidden=true;$('appPanel').hidden=false;$('nav').hidden=false;
+ render();
+}
+document.addEventListener('click',async ev=>{
+ const nav=ev.target.closest('[data-page]');if(nav&&currentAccount){screen=nav.dataset.page;chosenJob=null;render();return;}
+ const job=ev.target.closest('[data-job]');if(job&&currentAccount){chosenJob=job.dataset.job;screen='detail';render();return;}
+ if(ev.target.id==='back'){screen='jobs';render();return;}
+ if(ev.target.id==='signout'&&application){ev.target.disabled=true;try{await application.logoutRedirect({account:application.getActiveAccount(),postLogoutRedirectUri:redirectUri});}catch(e){ev.target.disabled=false;alert('Sign-out could not start: '+(e.errorCode||e.message||'Unknown error'));}}
+});
+document.addEventListener('keydown',ev=>{if((ev.key==='Enter'||ev.key===' ')&&ev.target.matches('[data-job]')){ev.preventDefault();ev.target.click();}});
+window.addEventListener('load',async()=>{
+ if(typeof msal==='undefined'){status('Microsoft authentication library unavailable. Check network access or content blockers.');return;}
+ try{
+  application=new msal.PublicClientApplication({auth:{clientId,authority:'https://login.microsoftonline.com/'+tenantId,redirectUri,navigateToLoginRequestUrl:false},cache:{cacheLocation:'sessionStorage',storeAuthStateInCookie:false}});
+  const result=await application.handleRedirectPromise();
+  const account=(result&&result.account)||application.getAllAccounts()[0]||null;
+  if(account){application.setActiveAccount(account);showSignedIn(account);}else{status('Not signed in. Select the button to sign in with your Edwards Precision work account.');}
+  $('signin').disabled=false;
+  $('signin').addEventListener('click',async()=>{
+   $('signin').disabled=true;status('Opening Microsoft sign-in…');
+   try{await application.loginRedirect({scopes:['openid','profile'],prompt:'select_account'});}catch(e){status('Could not start sign-in: '+(e.errorCode||e.message||'Unknown error'));$('signin').disabled=false;}
   });
+ }catch(e){status('Authentication error: '+(e.errorCode||e.message||'Unknown error'));$('signin').disabled=false;}
+});
 })();
 </script>
-</body></html>
+</body>
+</html>
