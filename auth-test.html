@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<meta http-equiv="Cache-Control" content="no-store">
+<title>Edwards Precision Mobile — Microsoft Sign-in Test</title>
+<style>
+:root{color-scheme:light;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;color:#14293d;background:#eaf1f7}
+*{box-sizing:border-box}body{margin:0;padding:24px 14px}.frame{max-width:520px;margin:0 auto;background:#f7fafc;border-radius:18px;overflow:hidden;min-height:70vh;box-shadow:0 8px 40px #102c4015}
+header{background:#132c42;color:#fff;padding:20px 24px;font-size:16px;font-weight:700;letter-spacing:1px}.sub{font-size:11px;letter-spacing:2px;color:#8facbf;margin-top:4px}
+main{padding:24px}.notice{background:#fff6e7;border:1px solid #e4bf70;padding:12px;border-radius:10px;font-size:13px;line-height:1.5;margin-bottom:22px}
+h1{font-size:23px;margin:0 0 8px}.muted{color:#587084;font-size:14px;line-height:1.5}.status{background:#fff;border:1px solid #dbe5ed;border-radius:12px;padding:15px;line-height:1.5;margin:16px 0;overflow-wrap:anywhere}
+button{width:100%;background:#117298;color:white;border:0;border-radius:10px;font-size:16px;font-weight:600;padding:14px;margin:8px 0;cursor:pointer}button.secondary{background:white;border:1px solid #9fb3c2;color:#193c50}button:disabled{opacity:.5;cursor:not-allowed}
+.label{font-size:12px;text-transform:uppercase;letter-spacing:1px;color:#587084;font-weight:700}.value{margin:4px 0 16px;font-size:14px;overflow-wrap:anywhere}
+footer{font-size:12px;color:#587084;line-height:1.5;margin-top:28px}
+</style>
+<script src="https://alcdn.msauth.net/browser/2.35.0/js/msal-browser.min.js" defer></script>
+</head>
+<body>
+<div class="frame"><header>EDWARDS PRECISION<div class="sub">MOBILE · SIGN-IN TEST</div></header>
+<main>
+<div class="notice"><strong>Authentication test only.</strong> This public test page does not access Smartsheet, QuickBooks, drawings or company files. It is not the live employee app.</div>
+<h1>Microsoft 365 sign-in</h1><p class="muted">Check that Microsoft recognises your Edwards Precision account and assigned application role.</p>
+<div class="status" id="status" role="status" aria-live="polite">Initialising sign-in test…</div>
+<section id="identity" hidden>
+<div class="label">Signed-in account</div><div class="value" id="user"></div>
+<div class="label">Assigned app roles (from ID token)</div><div class="value" id="roles"></div>
+</section>
+<button id="signin" disabled>Sign in with Microsoft 365</button>
+<button id="signout" class="secondary" hidden>Sign out of this test</button>
+<footer>Never enter passwords into this page. Microsoft's own login page handles credentials. A successful sign-in is not proof that backend permissions are implemented.</footer>
+</main></div>
+<script>
+(function(){
+  'use strict';
+  const clientId = '98e4ea5e-8c04-41da-b85c-875a1ef1c3c9';
+  const tenantId = 'a911bd42-b6dc-4f1f-b8fc-01ae15e707ae';
+  const redirectUri = 'https://julie903.github.io/edwards-precision-mobile-demo/auth-test.html';
+  const $ = id => document.getElementById(id);
+  const show = (message) => { $('status').textContent = message; };
+  const signInBtn = $('signin');
+  const signOutBtn = $('signout');
+  function renderAccount(account, result){
+    if(!account){
+      $('identity').hidden=true;signInBtn.hidden=false;signOutBtn.hidden=true;
+      show('Not signed in. Select the button below to start the Microsoft sign-in test.');return;
+    }
+    $('identity').hidden=false;signInBtn.hidden=true;signOutBtn.hidden=false;
+    $('user').textContent = account.username || account.name || 'Signed in';
+    const claims = (result && result.idTokenClaims) || account.idTokenClaims || {};
+    const roles = Array.isArray(claims.roles) ? claims.roles : [];
+    $('roles').textContent = roles.length ? roles.join(', ') : 'No app role returned in this session';
+    show('Microsoft sign-in completed. Check the displayed role below.');
+  }
+  window.addEventListener('load', async () => {
+    if(typeof msal === 'undefined'){
+      show('Microsoft sign-in library did not load. Check your connection or content blockers.');return;
+    }
+    try{
+      const application = new msal.PublicClientApplication({
+        auth: { clientId, authority: 'https://login.microsoftonline.com/' + tenantId, redirectUri, navigateToLoginRequestUrl:false },
+        cache: { cacheLocation:'sessionStorage', storeAuthStateInCookie:false }
+      });
+      const result = await application.handleRedirectPromise();
+      const account = (result && result.account) || application.getAllAccounts()[0] || null;
+      if(account) application.setActiveAccount(account);
+      renderAccount(account, result);
+      signInBtn.disabled=false;
+      signInBtn.addEventListener('click', async () => {
+        signInBtn.disabled=true; show('Opening Microsoft sign-in…');
+        try { await application.loginRedirect({scopes:['openid','profile'],prompt:'select_account'}); }
+        catch(error){ show('Sign-in could not start: '+(error.errorCode||error.message||'Unknown error'));signInBtn.disabled=false; }
+      });
+      signOutBtn.addEventListener('click', async () => {
+        signOutBtn.disabled=true;
+        try { await application.logoutRedirect({account:application.getActiveAccount(),postLogoutRedirectUri:redirectUri}); }
+        catch(error){ show('Sign-out could not start: '+(error.errorCode||error.message||'Unknown error'));signOutBtn.disabled=false; }
+      });
+    }catch(error){
+      show('Sign-in setup error: ' + (error.errorCode||error.message||'Unknown error'));
+    }
+  });
+})();
+</script>
+</body></html>
