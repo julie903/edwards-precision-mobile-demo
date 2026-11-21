@@ -39,6 +39,7 @@ const apiScope='api://4b35375d-ca2d-4c5b-a613-5c8adff8e281/Orders.Read';
 const apiUrl='https://edwards-mobile-backend-dev.onrender.com/api/orders';
 const $=id=>document.getElementById(id);
 let application=null, currentAccount=null, roles=[], screen='home', chosenJob=null;
+let apiJobs=null, apiJobDetails=null, apiMessage='Not loaded';
 const jobs=[
  {wo:'DEMO-1001',part:'Sample turned housing',customer:'Example Customer A',op:'OP20 · Turning',due:'24-11-2026',status:'In progress'},
  {wo:'DEMO-1002',part:'Sample mounting bracket',customer:'Example Customer B',op:'OP10 · Milling',due:'20-11-2026',status:'Overdue'},
@@ -52,7 +53,8 @@ function roleInfo(){
  const factory=roles.includes('Factory');
  return {authoriser,office,factory,allowed:office||factory,label:authoriser?'SDNR AUTHORISER · OFFICE':office?'OFFICE':factory?'FACTORY':'UNAUTHORISED'};
 }
-function makeJob(j){return `<article class="card job" tabindex="0" role="button" data-job="${escapeHTML(j.wo)}" aria-label="View ${escapeHTML(j.wo)}"><div class="row"><h2>${escapeHTML(j.wo)}</h2><span class="tag ${j.status==='Overdue'?'warn':''}">${escapeHTML(j.status)}</span></div><p><b>${escapeHTML(j.part)}</b></p><p>${escapeHTML(j.op)} · Due ${escapeHTML(j.due)}</p></article>`;}
+function formatDate(v){if(!/^\d{4}-\d{2}-\d{2}$/.test(String(v||'')))return String(v||'');const [y,m,d]=v.split('-');return `${d}-${m}-${y}`;}
+function makeJob(j){return `<article class="card job" tabindex="0" role="button" data-job="${escapeHTML(j.wo)}" aria-label="View ${escapeHTML(j.wo)}"><div class="row"><h2>${escapeHTML(j.wo)}</h2><span class="tag ${j.status==='Overdue'?'warn':''}">${escapeHTML(j.status)}</span></div><p><b>${escapeHTML(j.description||j.part)}</b></p><p>${escapeHTML(j.operationCount!=null?j.operationCount+' operations':j.op)} · Due ${escapeHTML(formatDate(j.dueDate||j.due))}</p></article>`;}
 function render(){
  const r=roleInfo();
  $('roleLabel').textContent=r.label;
@@ -60,16 +62,46 @@ function render(){
  $('subtitle').textContent=screen==='detail'?'Example job details — read only':`Signed in as ${currentAccount.name||currentAccount.username||'employee'}`;
  document.querySelectorAll('[data-page]').forEach(b=>b.classList.toggle('active',b.dataset.page===screen));
  let html='';
- if(screen==='home') html=`<div class="stats"><div class="stat"><b>3</b><span>Sample jobs</span></div><div class="stat"><b>1</b><span>Sample overdue</span></div></div><div class="card"><h2>Role recognised</h2><p>${escapeHTML(r.label)}</p><p>Office and Factory screens are derived from Microsoft's role claim, not an editable switch.</p></div><h2>Jobs needing attention</h2>${jobs.slice(0,2).map(makeJob).join('')}`;
- if(screen==='jobs') html=jobs.map(makeJob).join('');
+ if(screen==='home') html=`<div class="stats"><div class="stat"><b>3</b><span>Preview jobs (local)</span></div><div class="stat"><b>1</b><span>Preview overdue (local)</span></div></div><div class="card"><h2>Role recognised</h2><p>${escapeHTML(r.label)}</p><p>Office and Factory screens are derived from Microsoft's role claim, not an editable switch.</p></div><h2>Jobs needing attention</h2>${jobs.slice(0,2).map(makeJob).join('')}`;
+ if(screen==='jobs') html=`<div class="card"><p>${escapeHTML(apiMessage)}</p><button class="btn" id="loadJobs">Load authorised demo jobs</button></div>`+(Array.isArray(apiJobs)?apiJobs.map(makeJob).join(''):'');
  if(screen==='detail'){
-  const j=jobs.find(x=>x.wo===chosenJob);
-  if(!j){screen='jobs';render();return;}
-  html=`<button class="back" id="back">← Back to Jobs</button><div class="card"><h2>${escapeHTML(j.wo)}</h2><p>${escapeHTML(j.part)}</p><p><b>Customer:</b> ${escapeHTML(j.customer)}</p><p><b>Due:</b> ${escapeHTML(j.due)}</p><p><b>Operation:</b> ${escapeHTML(j.op)}</p><p><b>Status:</b> ${escapeHTML(j.status)}</p></div><p class="quiet">Fictional demonstration record. No changes can be submitted.</p>`;
+  const j=apiJobDetails && apiJobDetails.wo===chosenJob ? apiJobDetails : null;
+  html=`<button class="back" id="back">← Back to Jobs</button>`;
+  if (!j) html+=`<div class="card"><p>${escapeHTML(apiMessage)}</p></div>`;
+  else html+=`<div class="card"><h2>${escapeHTML(j.wo)}</h2><p><b>Part:</b> ${escapeHTML(j.partNumber)} · Rev ${escapeHTML(j.revision)}</p><p><b>Description:</b> ${escapeHTML(j.description)}</p><p><b>Customer:</b> ${escapeHTML(j.customer)}</p><p><b>Due:</b> ${escapeHTML(formatDate(j.dueDate))}</p><p><b>Status:</b> ${escapeHTML(j.status)}</p></div><h2>Operations</h2>${j.operations.map(op=>`<div class="card"><div class="row"><h2>${escapeHTML(op.op)} · ${escapeHTML(op.description)}</h2><span class="tag">${escapeHTML(op.status)}</span></div><p>Machinist: ${escapeHTML(op.machinist)}</p><p>Progress: ${Number(op.progress)}%</p><progress max="100" value="${Number(op.progress)}" style="width:100%"></progress></div>`).join('')}<p class="quiet">Fictional, read-only job details supplied by protected Render API.</p>`;
  }
  if(screen==='ncr') html=`<div class="card"><h2>${r.office?'Office NCR review':'Factory NCR reporting'}</h2><p>${r.authoriser?'SDNR approval would be available to your authorised account only after the protected backend independently checks your identity and permissions.':r.office?'You may review NCRs but not issue SDNRs.':'Factory staff can raise NCRs and record actions for each defect in the future live system.'}</p><button class="btn" disabled>${r.authoriser?'Issue SDNR — disabled':r.office?'Review NCR — disabled':'Raise NCR — disabled'}</button></div>`;
  if(screen==='more') html=`<div class="card"><h2>Account</h2><p class="idline">${escapeHTML(currentAccount.username||'')}</p><p class="idline">Assigned claims: ${escapeHTML(roles.join(', '))}</p></div><div class="card"><h2>Access</h2><p>${r.office?'Office preview available':'Office preview unavailable'}</p><p>${r.factory?'Factory role assigned':r.authoriser?'Office functions inherited through authoriser policy':'Factory role not assigned'}</p><p>All live data and write actions remain disabled.</p></div><div class="card"><h2>Protected Render API test</h2><p>Request an API token from Microsoft and test the development endpoint. Tokens are never displayed.</p><button class="btn" id="testApi">Test Microsoft API connection</button><p id="apiResult" role="status" aria-live="polite">Not tested</p></div><button class="btn secondary" id="signout">Sign out of Microsoft 365 test</button>`;
  $('content').innerHTML=html;
+}
+async function authorisedGet(path){
+ if(!application || !currentAccount)throw Error('Sign in first');
+ let token;
+ try {token=await application.acquireTokenSilent({account:currentAccount,scopes:[apiScope]});}
+ catch(e){
+  if(e instanceof msal.InteractionRequiredAuthError || ['interaction_required','consent_required','login_required'].includes(e.errorCode)){
+   await application.acquireTokenRedirect({account:currentAccount,scopes:[apiScope]});
+   return null;
+  }
+  throw e;
+ }
+ const response=await fetch(apiUrl+path,{method:'GET',mode:'cors',cache:'no-store',headers:{Authorization:'Bearer '+token.accessToken}});
+ let body={};try{body=await response.json();}catch{}
+ if(!response.ok)throw Error('HTTP '+response.status+' — '+(typeof body.error==='string'?body.error:'API request failed'));
+ if(body.fictional!==true || body.liveData!==false || body.readOnly!==true)throw Error('Unexpected data mode; response rejected');
+ return body;
+}
+async function loadJobs(){
+ apiMessage='Loading authorised fictional jobs…';render();
+ try{const body=await authorisedGet('');if(!body)return;apiJobs=body.jobs;apiMessage=body.count+' fictional jobs received from protected API';}
+ catch(e){apiJobs=null;apiMessage=e.message||'Unable to load jobs';}
+ render();
+}
+async function loadDetail(wo){
+ apiMessage='Loading job details…';apiJobDetails=null;render();
+ try{const body=await authorisedGet('/'+encodeURIComponent(wo));if(!body)return;apiJobDetails=body.job;apiMessage='Job details loaded';}
+ catch(e){apiMessage=e.message||'Unable to load job details';}
+ render();
 }
 function showSignedIn(account){
  const claims=account.idTokenClaims||{};
@@ -84,7 +116,8 @@ function showSignedIn(account){
 }
 document.addEventListener('click',async ev=>{
  const nav=ev.target.closest('[data-page]');if(nav&&currentAccount){screen=nav.dataset.page;chosenJob=null;render();return;}
- const job=ev.target.closest('[data-job]');if(job&&currentAccount){chosenJob=job.dataset.job;screen='detail';render();return;}
+ const job=ev.target.closest('[data-job]');if(job&&currentAccount){chosenJob=job.dataset.job;screen='detail';await loadDetail(chosenJob);return;}
+ if(ev.target.id==='loadJobs'&&currentAccount){await loadJobs();return;}
  if(ev.target.id==='back'){screen='jobs';render();return;}
  if(ev.target.id==='testApi'&&application&&currentAccount){
   const button=ev.target;const output=$('apiResult');
