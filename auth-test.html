@@ -19,9 +19,9 @@ nav{display:flex;border-top:1px solid #dde7ed;background:#fff;position:sticky;bo
 <script src="https://alcdn.msauth.net/browser/2.35.0/js/msal-browser.min.js" defer></script>
 </head>
 <body>
-<div class="app"><header><div class="mark">EP</div><div><strong>EDWARDS PRECISION</strong><small>MOBILE · AUTHENTICATED TEST</small></div></header>
+<div class="app"><header><div class="mark">EP</div><div><strong>EDWARDS PRECISION</strong><small>MOBILE · PROTECTED API TEST</small></div></header>
 <main>
-<div class="notice"><b>TEST ONLY — FICTIONAL INFORMATION.</b> This page verifies Microsoft sign-in and previews role-based screens. It is publicly hosted code, not a secure data backend. No customer data, Smartsheet access, purchasing or SDNR actions are enabled.</div>
+<div class="notice"><b>TEST ONLY — FICTIONAL INFORMATION.</b> This page verifies Microsoft sign-in and makes a protected request to the Render development API. All returned jobs are fictional. No live customer data, Smartsheet access, purchasing or SDNR actions are enabled.</div>
 <section id="loginPanel"><p class="eyebrow">MICROSOFT 365</p><h1>Employee sign-in</h1><p class="muted">Only accounts assigned to Edwards Precision Mobile should be able to complete Microsoft authentication. The application also checks the returned tenant and role.</p><div class="card" id="status" role="status" aria-live="polite">Initialising Microsoft sign-in…</div><button class="btn" id="signin" disabled>Sign in with Microsoft 365</button></section>
 <section id="appPanel" hidden>
 <div class="row"><p class="eyebrow" id="roleLabel"></p><span class="tag">TEST</span></div><h1 id="heading">Home</h1><p class="muted" id="subtitle"></p><div id="content"></div>
@@ -35,6 +35,8 @@ nav{display:flex;border-top:1px solid #dde7ed;background:#fff;position:sticky;bo
 const clientId='98e4ea5e-8c04-41da-b85c-875a1ef1c3c9';
 const tenantId='a911bd42-b6dc-4f1f-b8fc-01ae15e707ae';
 const redirectUri='https://julie903.github.io/edwards-precision-mobile-demo/auth-test.html';
+const apiScope='api://4b35375d-ca2d-4c5b-a613-5c8adff8e281/Orders.Read';
+const apiUrl='https://edwards-mobile-backend-dev.onrender.com/api/orders';
 const $=id=>document.getElementById(id);
 let application=null, currentAccount=null, roles=[], screen='home', chosenJob=null;
 const jobs=[
@@ -66,7 +68,7 @@ function render(){
   html=`<button class="back" id="back">← Back to Jobs</button><div class="card"><h2>${escapeHTML(j.wo)}</h2><p>${escapeHTML(j.part)}</p><p><b>Customer:</b> ${escapeHTML(j.customer)}</p><p><b>Due:</b> ${escapeHTML(j.due)}</p><p><b>Operation:</b> ${escapeHTML(j.op)}</p><p><b>Status:</b> ${escapeHTML(j.status)}</p></div><p class="quiet">Fictional demonstration record. No changes can be submitted.</p>`;
  }
  if(screen==='ncr') html=`<div class="card"><h2>${r.office?'Office NCR review':'Factory NCR reporting'}</h2><p>${r.authoriser?'SDNR approval would be available to your authorised account only after the protected backend independently checks your identity and permissions.':r.office?'You may review NCRs but not issue SDNRs.':'Factory staff can raise NCRs and record actions for each defect in the future live system.'}</p><button class="btn" disabled>${r.authoriser?'Issue SDNR — disabled':r.office?'Review NCR — disabled':'Raise NCR — disabled'}</button></div>`;
- if(screen==='more') html=`<div class="card"><h2>Account</h2><p class="idline">${escapeHTML(currentAccount.username||'')}</p><p class="idline">Assigned claims: ${escapeHTML(roles.join(', '))}</p></div><div class="card"><h2>Access</h2><p>${r.office?'Office preview available':'Office preview unavailable'}</p><p>${r.factory?'Factory role assigned':r.authoriser?'Office functions inherited through authoriser policy':'Factory role not assigned'}</p><p>All live data and write actions remain disabled.</p></div><button class="btn secondary" id="signout">Sign out of Microsoft 365 test</button>`;
+ if(screen==='more') html=`<div class="card"><h2>Account</h2><p class="idline">${escapeHTML(currentAccount.username||'')}</p><p class="idline">Assigned claims: ${escapeHTML(roles.join(', '))}</p></div><div class="card"><h2>Access</h2><p>${r.office?'Office preview available':'Office preview unavailable'}</p><p>${r.factory?'Factory role assigned':r.authoriser?'Office functions inherited through authoriser policy':'Factory role not assigned'}</p><p>All live data and write actions remain disabled.</p></div><div class="card"><h2>Protected Render API test</h2><p>Request an API token from Microsoft and test the development endpoint. Tokens are never displayed.</p><button class="btn" id="testApi">Test Microsoft API connection</button><p id="apiResult" role="status" aria-live="polite">Not tested</p></div><button class="btn secondary" id="signout">Sign out of Microsoft 365 test</button>`;
  $('content').innerHTML=html;
 }
 function showSignedIn(account){
@@ -84,6 +86,33 @@ document.addEventListener('click',async ev=>{
  const nav=ev.target.closest('[data-page]');if(nav&&currentAccount){screen=nav.dataset.page;chosenJob=null;render();return;}
  const job=ev.target.closest('[data-job]');if(job&&currentAccount){chosenJob=job.dataset.job;screen='detail';render();return;}
  if(ev.target.id==='back'){screen='jobs';render();return;}
+ if(ev.target.id==='testApi'&&application&&currentAccount){
+  const button=ev.target;const output=$('apiResult');
+  button.disabled=true;output.textContent='Requesting Microsoft API permission…';
+  try {
+    let result;
+    try {result=await application.acquireTokenSilent({account:currentAccount,scopes:[apiScope]});}
+    catch(e){
+      if(e instanceof msal.InteractionRequiredAuthError || ['interaction_required','consent_required','login_required'].includes(e.errorCode)){
+        output.textContent='Microsoft interaction required. Returning to Microsoft sign-in…';
+        await application.acquireTokenRedirect({account:currentAccount,scopes:[apiScope]});return;
+      }
+      throw e;
+    }
+    const response=await fetch(apiUrl,{method:'GET',mode:'cors',cache:'no-store',headers:{Authorization:'Bearer '+result.accessToken}});
+    let body={};try{body=await response.json();}catch{}
+    // Never display an access token or log the raw Microsoft response.
+    if(response.ok && body.fictional===true && body.liveData===false){
+      output.textContent='PASS — '+response.status+'; Microsoft API access accepted. '+Number(body.count||0)+' fictional jobs returned. No live data.';
+    }else{
+      const description=typeof body.error==='string'?body.error:'Unexpected API response';
+      output.textContent='HTTP '+response.status+' — '+description+'. No jobs displayed.';
+    }
+  } catch(e){
+    output.textContent='Test could not complete: '+(e instanceof TypeError?'Network or CORS connection error':(e.errorCode||e.message||'Unknown error'))+'. No access token displayed.';
+  }finally{button.disabled=false;}
+  return;
+ }
  if(ev.target.id==='signout'&&application){ev.target.disabled=true;try{await application.logoutRedirect({account:application.getActiveAccount(),postLogoutRedirectUri:redirectUri});}catch(e){ev.target.disabled=false;alert('Sign-out could not start: '+(e.errorCode||e.message||'Unknown error'));}}
 });
 document.addEventListener('keydown',ev=>{if((ev.key==='Enter'||ev.key===' ')&&ev.target.matches('[data-job]')){ev.preventDefault();ev.target.click();}});
