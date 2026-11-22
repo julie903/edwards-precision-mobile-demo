@@ -274,7 +274,15 @@ document.addEventListener('click',async ev=>{
     }else if(response.status===503){
       output.textContent='NOT READY (503) — private authentication test not configured. No data accessed.';
     }else{
-      output.textContent='Unexpected private API response: HTTP '+response.status+'. No data accessed.';
+      const checks={
+        status:body.status==='ok',
+        authenticated:body.authenticated===true,
+        officeAccess:body.officeAccess===true,
+        liveFlag:typeof body.liveDataEnabled==='boolean',
+        mode:body.mode==='auth-check'
+      };
+      const missing=Object.entries(checks).filter(([,pass])=>!pass).map(([k])=>k);
+      output.textContent='Private API compatibility check failed (HTTP '+response.status+'). Unmatched fields: '+(missing.length?missing.join(', '):'none')+'. No data accessed. Do not approve activation.';
     }
   }catch(e){
     output.textContent='Check could not complete: '+(e instanceof TypeError?'private connection unavailable. Check that NetBird is connected on your iPhone (VPN On Demand enabled), then retry. If NetBird is connected, check private DNS, HTTPS certificate and iMac gateway':(e.errorCode||'Microsoft sign-in error'))+'. No tokens displayed.';
