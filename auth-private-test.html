@@ -71,7 +71,7 @@ function filteredJobsHTML(){
  return shown.length?shown.map(makeJob).join(''):'<div class="card"><p>No fictional jobs match your search.</p></div>';
 }
 document.addEventListener('change',ev=>{
- if(/^jc(Setup|Run)(Start|Finish)(Hour|Minute)$/.test(ev.target.id))jobCardUpdateTotals();
+ if(/^jc(Setup|Run)(Start|Finish)$/.test(ev.target.id))jobCardUpdateTotals();
  if(['jcWo','jcOp','jcMachinist'].includes(ev.target.id))jobCardResetChecks();
  if(ev.target.id==='jcOp'&&jobCardLookup&&Array.isArray(jobCardLookup.operations)){
    const selected=ev.target.value===''?null:jobCardLookup.operations[Number(ev.target.value)];
@@ -100,7 +100,7 @@ document.addEventListener('change',ev=>{
  }
 });
 document.addEventListener('input',ev=>{
- if(/^jc(Setup|Run)(Start|Finish)(Hour|Minute)$/.test(ev.target.id)||['jcSetupBreaks','jcRunBreaks','jcGood'].includes(ev.target.id))jobCardUpdateTotals();
+ if(/^jc(Setup|Run)(Start|Finish)$/.test(ev.target.id)||['jcSetupBreaks','jcRunBreaks','jcGood'].includes(ev.target.id))jobCardUpdateTotals();
  if(ev.target.id==='jcSessionDate'){
    const label=$('jcDateDisplay');if(label)label.textContent='Selected date: '+(ev.target.value?formatDate(ev.target.value):'Not selected');
  }
@@ -127,15 +127,15 @@ document.addEventListener('input',ev=>{
 });
 
 function jobCardClockHTML(id,label){
- const hours=Array.from({length:24},(_,i)=>{const t=String(i).padStart(2,'0');return '<option value="'+t+'">'+t+'</option>'}).join('');
- const minutes=Array.from({length:60},(_,i)=>{const t=String(i).padStart(2,'0');return '<option value="'+t+'">'+t+'</option>'}).join('');
- return '<label class="quiet" for="'+id+'Hour">'+label+' (24-hour)</label><div class="row"><select class="search" id="'+id+'Hour" aria-label="'+label+' hour"><option value="">Hour</option>'+hours+'</select><select class="search" id="'+id+'Minute" aria-label="'+label+' minute"><option value="">Min</option>'+minutes+'</select></div>';
+ return '<label class="quiet" for="'+id+'">'+label+' time</label><input class="search" id="'+id+'" type="time" step="60" aria-label="'+label+' time">';
 }
 function jobCardClockMinutes(id){
- const h=$(id+'Hour')?.value||'',m=$(id+'Minute')?.value||'';
- if(!h&&m==='')return {used:false,valid:false,minutes:NaN};
- const hour=Number(h),minute=Number(m);
- if(h===''||m===''||!Number.isInteger(hour)||hour<0||hour>23||!Number.isInteger(minute)||minute<0||minute>59)return {used:true,valid:false,minutes:NaN};
+ const value=String($(id)?.value||'');
+ if(!value)return {used:false,valid:false,minutes:NaN};
+ const match=/^(\d{2}):(\d{2})$/.exec(value);
+ if(!match)return {used:true,valid:false,minutes:NaN};
+ const hour=Number(match[1]),minute=Number(match[2]);
+ if(hour>23||minute>59)return {used:true,valid:false,minutes:NaN};
  return {used:true,valid:true,minutes:hour*60+minute};
 }
 
