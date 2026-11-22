@@ -4,7 +4,7 @@
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#142c40"><meta name="robots" content="noindex,nofollow"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="default"><meta name="apple-mobile-web-app-title" content="Edwards Mobile"><link rel="manifest" href="./manifest.webmanifest"><link rel="apple-touch-icon" sizes="180x180" href="./icon-180.png"><link rel="icon" type="image/svg+xml" href="./icon.svg">
 <meta http-equiv="Cache-Control" content="no-store">
-<title>Edwards Precision Mobile — Office Development</title>
+<title>Edwards Precision Mobile — Private Pilot</title>
 <style>
 :root{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;color:#142c40;background:#eaf1f7;color-scheme:light}
 [hidden]{display:none!important}#jcAfterChecks:not([data-unlocked="true"]){display:none!important}*{box-sizing:border-box}body{margin:0;padding:0}.app{max-width:530px;min-height:100dvh;margin:0 auto;background:#f7fafc;border-radius:18px;box-shadow:0 8px 35px #142c4014;overflow:clip;display:flex;flex-direction:column}
@@ -19,7 +19,7 @@ nav{display:flex;border-bottom:1px solid #dde7ed;background:#fff;position:sticky
 <script src="https://alcdn.msauth.net/browser/2.35.0/js/msal-browser.min.js" defer></script>
 </head>
 <body>
-<div class="app"><header><div class="mark">EP</div><div><strong>EDWARDS PRECISION</strong><small>MOBILE · OFFICE DEVELOPMENT</small></div></header>
+<div class="app"><header><div class="mark">EP</div><div><strong>EDWARDS PRECISION</strong><small>MOBILE · PRIVATE PILOT</small></div></header>
 <nav id="nav" hidden aria-label="Main navigation"><button data-page="home" class="active">Home</button><button data-page="overview" data-office-section hidden>Overview</button><button data-page="jobs">Jobs</button><button data-page="myProgress" data-factory-only hidden>In Progress</button><button data-page="jobcard" data-factory-section hidden>Job Card</button><button data-page="machineReports" data-office-section hidden>Machines</button><button data-page="priorities" data-office-section hidden>Priorities</button><button data-page="duedates" data-office-section hidden>Due Dates</button><button data-page="parts" data-office-section hidden>Parts</button><button data-page="ncr">NCRs</button><button data-page="more">More</button></nav>
 <main>
 <div class="notice"><b>TEST ONLY — FICTIONAL INFORMATION.</b> This page verifies Microsoft sign-in and makes a protected request to the Render development API. All returned jobs are fictional. No live customer data, Smartsheet access, purchasing or SDNR actions are enabled.</div>
@@ -279,10 +279,11 @@ function filteredLiveJobsHTML(){
 }
 function render(){
  const r=roleInfo();
+ if(screen==='jobs'&&r.office)screen='livejobs';
  const notice=document.querySelector('.notice');
  if(notice){
-   if(['livejobs','livedetail','overview','priorities','duedates','parts','machineReports'].includes(screen)){
-     notice.textContent='PRIVATE READ-ONLY PILOT — Office-only access through the iMac over NetBird. Live data is shown only after independent server approval. No editing, purchasing or SDNR actions are available.';
+   if(r.office||['livejobs','livedetail','overview','priorities','duedates','parts','machineReports'].includes(screen)){
+     notice.textContent='PRIVATE READ-ONLY PILOT — Live Open Orders require your authorised Microsoft account and NetBird access to the iMac. No editing, purchasing, hours submission or SDNR issuing is enabled.';
    }else{
      notice.innerHTML='<b>TEST ONLY — FICTIONAL INFORMATION.</b> The normal demo Jobs screen uses fictional records. Production access is available only through the separate, restricted private pilot.';
    }
@@ -301,7 +302,7 @@ function render(){
  if(screen==='home' && !r.office) html=`<div class="card"><h2>My Jobs in Progress</h2><p>Find active operations assigned to your account in one tap. Fictional Factory pilot records only.</p><button class="btn" id="openMyProgress">View my in-progress jobs</button></div>`+`<div class="card"><h2>My assigned operations</h2><p>Open Jobs to load your own fictional operations securely. The full Open Orders list is not available to Factory staff.</p><button class="btn secondary" id="openJobCardPreview">Preview Job Card Entry</button></div>`;
  if(screen==='myProgress') html=(r.factory&&!r.office)?`<div class="card"><h2>My Jobs in Progress · pilot</h2><p>Only operations assigned to your signed-in Factory account and marked In progress or Started by the protected Factory demo service are shown. These are fictional records, not the live production schedule.</p><p role="status">${escapeHTML(factoryMessage)}</p><button class="btn" id="refreshMyProgress">Refresh my jobs</button><p class="quiet">Tap an operation to see its job details. Live Job Card auto-fill requires a separately authorised Factory gateway.</p></div>${myInProgressHTML()}`:'<div class="card">Factory role required.</div>';
  if(screen==='jobs' && !r.office) html=`<div class="card"><p>Factory access is limited to operations assigned to your Microsoft account, never the complete Open Orders list.</p><p>${escapeHTML(factoryMessage)}</p><button class="btn" id="loadFactory">Load my demo operations</button></div>`+(Array.isArray(factoryOperations)?factoryOperations.map(makeOperation).join(''):'');
- if(screen==='jobs' && r.office) html=`<div class="card"><p>${escapeHTML(apiMessage)}</p><button class="btn" id="loadJobs">Refresh authorised demo jobs</button></div>`+(Array.isArray(apiJobs)?`<label for="jobSearch" class="quiet">Search fictional jobs by WO, part or customer</label><input id="jobSearch" class="search" type="search" placeholder="Search jobs" value="${escapeHTML(jobFilter)}" autocomplete="off"><div id="filteredJobs">${filteredJobsHTML()}</div>`:'');
+ if(screen==='jobs' && r.office) html='<div class="card">Open Orders: private live jobs require independent Office authorisation.</div>';
  if(screen==='detail'){
   const j=apiJobDetails && apiJobDetails.wo===chosenJob ? apiJobDetails : null;
   html=`<button class="back" id="back">← Back to Jobs</button>`;
@@ -456,6 +457,7 @@ function showSignedIn(account){
  const recognised=roles.some(r=>['Office','Factory','SDNR.Authoriser'].includes(r));
  if(!recognised){status('Signed in, but no Edwards Precision Mobile app role was returned. Access denied.');return;}
  currentAccount=account;
+ if(roleInfo().office&&(screen==='jobs'||screen==='detail')){screen='livejobs';chosenJob=null;apiJobs=null;apiJobDetails=null;}
  $('loginPanel').hidden=true;$('appPanel').hidden=false;$('nav').hidden=false;
  render();
 }
