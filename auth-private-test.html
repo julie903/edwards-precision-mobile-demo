@@ -7,12 +7,12 @@
 <title>Edwards Precision Mobile — Office Development</title>
 <style>
 :root{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;color:#142c40;background:#eaf1f7;color-scheme:light}
-[hidden]{display:none!important}*{box-sizing:border-box}body{margin:0;padding:0}.app{max-width:530px;min-height:100dvh;margin:0 auto;background:#f7fafc;border-radius:18px;box-shadow:0 8px 35px #142c4014;overflow:hidden;display:flex;flex-direction:column}
+[hidden]{display:none!important}*{box-sizing:border-box}body{margin:0;padding:0}.app{max-width:530px;min-height:100dvh;margin:0 auto;background:#f7fafc;border-radius:18px;box-shadow:0 8px 35px #142c4014;overflow:clip;display:flex;flex-direction:column}
 header{background:#142c40;color:#fff;padding:calc(18px + env(safe-area-inset-top)) 20px 18px;display:flex;align-items:center;gap:10px}.mark{background:#237b9c;border-radius:10px;padding:10px;font-size:15px;font-weight:800}header strong{font-size:13px;letter-spacing:1.5px}header small{display:block;color:#9bb5c8;font-size:10px;letter-spacing:2px;margin-top:3px}
 main{padding:17px;flex:1}.notice{font-size:12px;background:#fff7e8;color:#795621;border:1px solid #e6bf71;border-radius:10px;line-height:1.55;padding:12px;margin-bottom:20px}
 .eyebrow{font-size:11px;color:#297b9e;font-weight:800;letter-spacing:1.5px;margin:0 0 7px}h1{font-size:24px;letter-spacing:-.7px;margin:0 0 8px}.muted{font-size:13px;line-height:1.5;color:#607487}.card{background:#fff;border:1px solid #dfe8ef;border-radius:12px;padding:15px;margin:11px 0}.card h2{font-size:16px;margin:0 0 8px}.card p{font-size:13px;line-height:1.5;margin:5px 0;color:#546d80}.row{display:flex;align-items:center;justify-content:space-between;gap:10px}.tag{background:#e7f2f8;color:#216e90;font-weight:750;font-size:11px;padding:5px 8px;border-radius:7px}.tag.warn{background:#fff0e8;color:#ad5b33}.late-due{color:#a53623}
 .btn{background:#19769a;border:0;color:#fff;font-size:15px;font-weight:700;padding:13px 16px;border-radius:10px;cursor:pointer;width:100%;margin-top:10px}.btn.secondary{background:#fff;border:1px solid #aec5d2;color:#1d526c}.btn:disabled{opacity:.55;cursor:not-allowed}
-nav{display:flex;border-top:1px solid #dde7ed;background:#fff;position:sticky;bottom:0;padding-bottom:env(safe-area-inset-bottom);overflow-x:auto}nav button{flex:0 0 auto;min-width:75px;background:transparent;border:0;padding:14px 6px;color:#63798d;font-weight:650;font-size:12px;cursor:pointer}nav button[hidden]{display:none}nav button.active{color:#147699;border-top:3px solid #147699;padding-top:11px}
+nav{display:flex;border-bottom:1px solid #dde7ed;background:#fff;position:sticky;top:0;z-index:20;overflow-x:auto;overscroll-behavior-x:contain;-webkit-overflow-scrolling:touch}nav button{flex:0 0 auto;min-width:75px;background:transparent;border:0;padding:14px 6px;color:#63798d;font-weight:650;font-size:12px;cursor:pointer}nav button[hidden]{display:none}nav button.active{color:#147699;border-bottom:3px solid #147699;padding-bottom:11px}
 .stats{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:15px}.stat{background:#fff;border:1px solid #dde7ee;padding:15px;border-radius:12px}.stat b{display:block;font-size:24px}.stat span{font-size:12px;color:#677b8a}.job{cursor:pointer}.job:focus-visible{outline:3px solid #147699}.back{background:none;border:0;color:#147699;font-weight:700;font-size:14px;padding:10px 0;cursor:pointer}
 #status{overflow-wrap:anywhere}.idline{font-size:12px;word-break:break-word;color:#4c667a}.quiet{font-size:12px;color:#718391}.hide{display:none!important}.search{display:block;width:100%;font:inherit;font-size:16px;border:1px solid #cbdbe5;border-radius:10px;padding:12px;margin:12px 0;background:#fff}
 </style>
@@ -20,6 +20,7 @@ nav{display:flex;border-top:1px solid #dde7ed;background:#fff;position:sticky;bo
 </head>
 <body>
 <div class="app"><header><div class="mark">EP</div><div><strong>EDWARDS PRECISION</strong><small>MOBILE · OFFICE DEVELOPMENT</small></div></header>
+<nav id="nav" hidden aria-label="Main navigation"><button data-page="home" class="active">Home</button><button data-page="overview" data-office-section hidden>Overview</button><button data-page="jobs">Jobs</button><button data-page="jobcard" data-factory-section hidden>Job Card</button><button data-page="priorities" data-office-section hidden>Priorities</button><button data-page="duedates" data-office-section hidden>Due Dates</button><button data-page="parts" data-office-section hidden>Parts</button><button data-page="ncr">NCRs</button><button data-page="more">More</button></nav>
 <main>
 <div class="notice"><b>TEST ONLY — FICTIONAL INFORMATION.</b> This page verifies Microsoft sign-in and makes a protected request to the Render development API. All returned jobs are fictional. No live customer data, Smartsheet access, purchasing or SDNR actions are enabled.</div>
 <section id="loginPanel"><p class="eyebrow">MICROSOFT 365</p><h1>Employee sign-in</h1><p class="muted">Only accounts assigned to Edwards Precision Mobile should be able to complete Microsoft authentication. The application also checks the returned tenant and role.</p><div class="card" id="status" role="status" aria-live="polite">Initialising Microsoft sign-in…</div><button class="btn" id="signin" disabled>Sign in with Microsoft 365</button></section>
@@ -27,7 +28,7 @@ nav{display:flex;border-top:1px solid #dde7ed;background:#fff;position:sticky;bo
 <div class="row"><p class="eyebrow" id="roleLabel"></p><span class="tag">DEVELOPMENT</span></div><h1 id="heading">Home</h1><p class="muted" id="subtitle"></p><div id="content"></div>
 </section>
 </main>
-<nav id="nav" hidden aria-label="Main navigation"><button data-page="home" class="active">Home</button><button data-page="overview" data-office-section hidden>Overview</button><button data-page="jobs">Jobs</button><button data-page="jobcard" data-factory-section hidden>Job Card</button><button data-page="priorities" data-office-section hidden>Priorities</button><button data-page="duedates" data-office-section hidden>Due Dates</button><button data-page="parts" data-office-section hidden>Parts</button><button data-page="ncr">NCRs</button><button data-page="more">More</button></nav>
+
 </div>
 <script>
 (function(){
