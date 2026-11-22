@@ -19,7 +19,7 @@ nav{display:flex;border-bottom:1px solid #dde7ed;background:#fff;position:sticky
 <script src="https://alcdn.msauth.net/browser/2.35.0/js/msal-browser.min.js" defer></script>
 </head>
 <body>
-<div class="app"><header><div class="mark">EP</div><div><strong>EDWARDS PRECISION</strong><small>MOBILE · PRIVATE PILOT</small></div></header>
+<div class="app"><header><div class="mark">EP</div><div><strong>EDWARDS PRECISION</strong><small>MOBILE · PRIVATE PILOT · B49</small></div></header>
 <nav id="nav" hidden aria-label="Main navigation"><button data-page="home" class="active">Home</button><button data-page="overview" data-office-section hidden>Overview</button><button data-page="jobs">Jobs</button><button data-page="myProgress" data-factory-only hidden>In Progress</button><button data-page="jobcard" data-factory-section hidden>Job Card</button><button data-page="machineReports" data-office-section hidden>Machines</button><button data-page="priorities" data-office-section hidden>Priorities</button><button data-page="duedates" data-office-section hidden>Due Dates</button><button data-page="parts" data-office-section hidden>Parts</button><button data-page="ncr">NCRs</button><button data-page="more">More</button></nav>
 <main>
 <div class="notice"><b>TEST ONLY — FICTIONAL INFORMATION.</b> This page verifies Microsoft sign-in and makes a protected request to the Render development API. All returned jobs are fictional. No live customer data, Smartsheet access, purchasing or SDNR actions are enabled.</div>
@@ -457,9 +457,10 @@ function showSignedIn(account){
  const recognised=roles.some(r=>['Office','Factory','SDNR.Authoriser'].includes(r));
  if(!recognised){status('Signed in, but no Edwards Precision Mobile app role was returned. Access denied.');return;}
  currentAccount=account;
- if(roleInfo().office&&(screen==='jobs'||screen==='detail')){screen='livejobs';chosenJob=null;apiJobs=null;apiJobDetails=null;}
+ if(roleInfo().office){screen='livejobs';chosenJob=null;apiJobs=null;apiJobDetails=null;}
  $('loginPanel').hidden=true;$('appPanel').hidden=false;$('nav').hidden=false;
  render();
+ if(roleInfo().office)void loadLiveJobs();
 }
 document.addEventListener('click',async ev=>{
  const nav=ev.target.closest('[data-page]');if(nav&&currentAccount){const page=nav.dataset.page;if(page==='jobcard'&&!((roleInfo().factory&&!roleInfo().office)||roleInfo().authoriser))return;if(page==='myProgress'&&!(roleInfo().factory&&!roleInfo().office))return;if(['overview','priorities','duedates','parts','machineReports'].includes(page)&&!roleInfo().office)return;screen=(page==='jobs'&&roleInfo().office)?'livejobs':page;chosenJob=null;chosenOperation=null;render();if(screen==='myProgress'&&!Array.isArray(factoryOperations))await loadFactory();if(['livejobs','overview','priorities','duedates','parts'].includes(screen)&&!Array.isArray(liveJobs))await loadLiveJobsForSection();return;}
