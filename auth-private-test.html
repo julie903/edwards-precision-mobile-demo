@@ -379,7 +379,9 @@ async function authorisedFactoryGet(path){
  if(response.status===404||response.status===503)throw Error('Live Factory operations not yet enabled on private backend. No demo jobs displayed.');
  if(!response.ok)throw Error('Private Factory service error (HTTP '+response.status+'). No demo jobs displayed.');
  const body=await response.json();
- if(body.liveData!==true||body.readOnly!==true||body.fictional===true||!Array.isArray(body.operations)||!Number.isInteger(body.count)||body.count!==body.operations.length||body.operations.length>500)throw Error('Factory response failed validation. No operations displayed.');
+ if(body.liveData!==true||body.readOnly!==true||body.fictional===true)throw Error('Factory response failed mode validation. No data displayed.');
+ if(path){if(!body.operation||typeof body.operation!=='object'||typeof body.operation.id!=='string'||body.operation.id!==decodeURIComponent(path.slice(1)))throw Error('Factory operation detail failed validation.');}
+ else if(!Array.isArray(body.operations)||!Number.isInteger(body.count)||body.count!==body.operations.length||body.operations.length>500)throw Error('Factory list failed validation. No operations displayed.');
  return body;
 }
 async function privateOrdersGet(path=''){
