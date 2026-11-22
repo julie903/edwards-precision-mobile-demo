@@ -69,6 +69,7 @@ function filteredJobsHTML(){
  return shown.length?shown.map(makeJob).join(''):'<div class="card"><p>No fictional jobs match your search.</p></div>';
 }
 document.addEventListener('input',ev=>{
+ if(ev.target.id==='jcWo'&&jobCardLookup&&String(ev.target.value||'').trim()!==jobCardLookup.wo){const msg=$('jcValidation');if(msg)msg.textContent='Work order changed: look up the new job before checking the entry.';}
  if(ev.target.id==='partFinderSearch'){
    partSearch=ev.target.value;
    if(Array.isArray(liveJobs)){
@@ -345,7 +346,7 @@ document.addEventListener('click',async ev=>{
  }
  if(ev.target.id==='jcValidate'&&currentAccount&&screen==='jobcard'&&((roleInfo().factory&&!roleInfo().office)||roleInfo().authoriser)){
    const errors=[];
-   if(!jobCardLookup)errors.push('a verified job lookup');
+   if(!jobCardLookup||String($('jcWo')?.value||'').trim()!==jobCardLookup.wo)errors.push('a verified job lookup matching the entered work order');
    if(!($('jcOp')&&$('jcOp').value!==''))errors.push('an operation');
    if(!String($('jcMachinist')?.value||'').trim())errors.push('the operator');
    const qty=String($('jcQty')?.value||''),minutes=String($('jcTime')?.value||'');
