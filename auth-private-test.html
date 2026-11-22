@@ -69,6 +69,7 @@ function filteredJobsHTML(){
  return shown.length?shown.map(makeJob).join(''):'<div class="card"><p>No fictional jobs match your search.</p></div>';
 }
 document.addEventListener('input',ev=>{
+ if(['jcSetupStart','jcSetupFinish','jcSetupBreaks','jcRunStart','jcRunFinish','jcRunBreaks','jcGood'].includes(ev.target.id))jobCardUpdateTotals();
  if(ev.target.id==='jcWo'&&jobCardLookup&&String(ev.target.value||'').trim()!==jobCardLookup.wo){const msg=$('jcValidation');if(msg)msg.textContent='Work order changed: look up the new job before checking the entry.';}
  if(ev.target.id==='partFinderSearch'){
    partSearch=ev.target.value;
@@ -90,6 +91,25 @@ document.addEventListener('input',ev=>{
    const list=$('filteredJobs');if(list)list.innerHTML=filteredJobsHTML();
  }
 });
+
+function jobCardWholeNumber(v){
+ const t=String(v??'').trim();
+ return t!==''&&/^\\d+$/.test(t)&&Number.isSafeInteger(Number(t))?Number(t):null;
+}
+function jobCardTimeCheck(prefix){
+ const start=String($(prefix+'Start')?.value||''),end=String($(prefix+'Finish')?.value||''),breakText=String($(prefix+'Breaks')?.value||'');
+ const used=!!(start||end||breakText);
+ const mins=t=>/^\\d{2}:\\d{2}$/.test(t)?Number(t.slice(0,2))*60+Number(t.slice(3,5)):NaN;
+ const a=mins(start),b=mins(end),br=jobCardWholeNumber(breakText);
+ const net=b-a-(br??NaN);
+ return {used,valid:used&&Number.isFinite(net)&&net>=0&&b>a&&b<=1440,minutes:net};
+}
+function jobCardUpdateTotals(){
+ const setup=jobCardTimeCheck('jcSetup'),run=jobCardTimeCheck('jcRun'),good=jobCardWholeNumber($('jcGood')?.value);
+ const a=$('jcSetupNet'),b=$('jcRunNet');
+ if(a)a.textContent='Net set-up hours: '+(setup.valid?(setup.minutes/60).toFixed(2):'—');
+ if(b)b.textContent='Net run hours: '+(run.valid?(run.minutes/60).toFixed(2):'—')+' · Minutes per good part: '+(run.valid&&good>0?(run.minutes/good).toFixed(2):'—');
+}
 
 function liveDueKey(j){
  const d=String(j&&j.dueDate||'');
@@ -189,7 +209,7 @@ function render(){
  if(screen==='priorities') html=r.office?liveSectionHTML('priorities'):'<div class="card">Office access required.</div>';
  if(screen==='duedates') html=r.office?dueDatesSectionHTML():'<div class="card">Office access required.</div>';
  if(screen==='parts') html=r.office?partsSectionHTML():'<div class="card">Office access required.</div>';
- if(screen==='jobcard') html=((r.factory&&!r.office)||r.authoriser)?`<div class="card"><h2>Job Card Entry · non-submitting preview</h2><p><b>No production submission:</b> The form is for layout and validation testing only. Entries are not saved or sent.</p></div><div class="card"><h2>Job and operation lookup</h2><label for="jcWo" class="quiet">Work order number</label><input id="jcWo" class="search" type="text" placeholder="W.O. number" autocomplete="off" maxlength="50"><button class="btn secondary" id="jcLookup" ${r.authoriser?'':'disabled'}>Look up live job (Administrator only)</button><p class="quiet" id="jcLookupStatus" role="status">${escapeHTML(jobCardMessage)}</p>${jobCardLookup&&r.authoriser?`<p><b>Part:</b> ${escapeHTML(jobCardLookup.partNumber||'—')} · <b>Rev:</b> ${escapeHTML(jobCardLookup.revision||'—')}</p><p><b>Description:</b> ${escapeHTML(jobCardLookup.description||'—')}</p><p><b>Due:</b> ${escapeHTML(formatDate(jobCardLookup.dueDate)||'—')}</p><label for="jcOp" class="quiet">Operation</label><select class="search" id="jcOp"><option value="">Select operation</option>${jobCardLookup.operations.map((op,index)=>`<option value="${index}">${escapeHTML(op.op||'Operation '+(index+1))} · ${escapeHTML(op.machine||'Machine not supplied')} · ${escapeHTML(op.status||'')}</option>`).join('')}</select>`:'<p class="quiet">Live auto-fill is restricted to the Administrator preview. Factory lookup requires a separately authorised gateway.</p>'}</div><div class="card"><h2>Proposed operator entry</h2><label for="jcMachinist" class="quiet">Machinist / operator</label><input id="jcMachinist" class="search" autocomplete="off" placeholder="Operator"><label for="jcQty" class="quiet">Quantity completed</label><input id="jcQty" class="search" type="number" min="0" step="1" placeholder="Quantity"><label for="jcTime" class="quiet">Time spent (minutes)</label><input id="jcTime" class="search" type="number" min="0" step="1" placeholder="Minutes"><label for="jcNotes" class="quiet">Operator notes</label><textarea id="jcNotes" class="search" rows="3" placeholder="Notes for the job card"></textarea><button class="btn secondary" id="jcValidate">Check entry (no submission)</button><p id="jcValidation" role="status" class="quiet">Not checked</p><button class="btn" disabled>Submit Job Card — not enabled</button><p class="quiet">The existing Factory App's field mapping and write permissions must be verified before enabling submission.</p></div>`:'<div class="card">Job Card preview is limited to Administrator or Factory accounts.</div>';
+ if(screen==='jobcard') html=((r.factory&&!r.office)||r.authoriser)?`<div class="card"><h2>Job Card Entry · non-submitting preview</h2><p><b>No production submission:</b> The form is for layout and validation testing only. Entries are not saved or sent.</p></div><div class="card"><h2>Job and operation lookup</h2><label for="jcWo" class="quiet">Work order number</label><input id="jcWo" class="search" type="text" placeholder="W.O. number" autocomplete="off" maxlength="50"><button class="btn secondary" id="jcLookup" ${r.authoriser?'':'disabled'}>Look up live job (Administrator only)</button><p class="quiet" id="jcLookupStatus" role="status">${escapeHTML(jobCardMessage)}</p>${jobCardLookup&&r.authoriser?`<p><b>Part:</b> ${escapeHTML(jobCardLookup.partNumber||'—')} · <b>Rev:</b> ${escapeHTML(jobCardLookup.revision||'—')}</p><p><b>Description:</b> ${escapeHTML(jobCardLookup.description||'—')}</p><p><b>Due:</b> ${escapeHTML(formatDate(jobCardLookup.dueDate)||'—')}</p><label for="jcOp" class="quiet">Operation</label><select class="search" id="jcOp"><option value="">Select operation</option>${jobCardLookup.operations.map((op,index)=>`<option value="${index}">${escapeHTML(op.op||'Operation '+(index+1))} · ${escapeHTML(op.machine||'Machine not supplied')} · ${escapeHTML(op.status||'')}</option>`).join('')}</select>`:'<p class="quiet">Live auto-fill is restricted to the Administrator preview. Factory lookup requires a separately authorised gateway.</p>'}</div><div class="card"><h2>Session details</h2><p class="quiet">Preview of the Edwards Precision Job Card Time Record. Use one row per operation/session.</p><label for="jcMachinist" class="quiet">Operator</label><input id="jcMachinist" class="search" placeholder="Machinist / operator" autocomplete="off"><label for="jcSessionDate" class="quiet">Session date</label><input id="jcSessionDate" class="search" type="date"></div><div class="card"><h2>Set-up time record</h2><label class="quiet" for="jcSetupStart">Start (24-hour)</label><input id="jcSetupStart" class="search" type="time"><label class="quiet" for="jcSetupFinish">Finish</label><input id="jcSetupFinish" class="search" type="time"><label class="quiet" for="jcSetupBreaks">Breaks / stoppages (minutes)</label><input id="jcSetupBreaks" class="search" type="number" min="0" step="1" placeholder="0"><label class="quiet" for="jcSetupInitials">Set-up initials</label><input id="jcSetupInitials" class="search" maxlength="20" placeholder="Initials"><p id="jcSetupNet" class="quiet">Net set-up hours: —</p></div><div class="card"><h2>Machining run time record</h2><label class="quiet" for="jcRunStart">Start (24-hour)</label><input id="jcRunStart" class="search" type="time"><label class="quiet" for="jcRunFinish">Finish</label><input id="jcRunFinish" class="search" type="time"><label class="quiet" for="jcRunBreaks">Breaks / stoppages (minutes)</label><input id="jcRunBreaks" class="search" type="number" min="0" step="1" placeholder="0"><label class="quiet" for="jcGood">Quantity good</label><input id="jcGood" class="search" type="number" min="0" step="1"><label class="quiet" for="jcReject">Quantity reject</label><input id="jcReject" class="search" type="number" min="0" step="1"><label class="quiet" for="jcInspection">Inspection initials</label><input id="jcInspection" class="search" maxlength="20" placeholder="Initials"><p id="jcRunNet" class="quiet">Net run hours: — · Minutes per good part: —</p></div><div class="card"><h2>Stoppages / handover notes</h2><label class="quiet" for="jcNotes">Include OP and time lost</label><textarea id="jcNotes" class="search" rows="3" placeholder="Session notes"></textarea><button class="btn secondary" id="jcValidate">Check time record (no submission)</button><p id="jcValidation" role="status" class="quiet">Not checked</p><button class="btn" disabled>Submit Job Card — not enabled</button><p class="quiet">This preview neither saves entries nor changes production records. Secure write mapping remains unverified.</p></div>`:'<div class="card">Job Card preview is limited to Administrator or Factory accounts.</div>';
  if(screen==='ncr') html=`<div class="card"><h2>${r.office?'Office NCR review':'Factory NCR reporting'}</h2><p>${r.authoriser?'SDNR approval would be available to your authorised account only after the protected backend independently checks your identity and permissions.':r.office?'You may review NCRs but not issue SDNRs.':'Factory staff can raise NCRs and record actions for each defect in the future live system.'}</p><button class="btn" disabled>${r.authoriser?'Issue SDNR — disabled':r.office?'Review NCR — disabled':'Raise NCR — disabled'}</button></div>`;
  if(screen==='more') html=`<div class="card"><h2>Account</h2><p class="idline">${escapeHTML(currentAccount.username||'')}</p><p class="idline">Assigned claims: ${escapeHTML(roles.join(', '))}</p></div><div class="card"><h2>Access</h2><p>${r.office?'Office preview available':'Office preview unavailable'}</p><p>${r.factory?'Factory role assigned':r.authoriser?'Office functions inherited through authoriser policy':'Factory role not assigned'}</p><p>All live data and write actions remain disabled.</p></div>${r.office?'<div class="card"><h2>Factory operations preview</h2><p>Fictional API records only. This does not grant a Factory employee Office permissions.</p><button class="btn" id="previewFactory">Open Factory operations preview</button></div>':''}<div class="card"><h2>Private iMac authentication check</h2><p>Check your Microsoft Office permissions through private NetBird HTTPS. No customer records or Smartsheet access.</p><button class="btn" id="testPrivateAuth">Check private Microsoft access</button><p id="privateAuthResult" role="status" aria-live="polite">Not tested</p></div><div class="card"><h2>Protected Render API test</h2><p>Request an API token from Microsoft and test the development endpoint. Tokens are never displayed.</p><button class="btn" id="testApi">Test Microsoft API connection</button><p id="apiResult" role="status" aria-live="polite">Not tested</p></div><button class="btn secondary" id="signout">Sign out of Microsoft 365 test</button>`;
  if(screen==='more' && r.office)html+='<div class="card"><h2>Other modules — not yet connected</h2><p>Collections, Material &amp; POs, Quotations &amp; RFQs and Statements are planned sections. They are not live or editable in this pilot.</p></div>';
@@ -346,14 +366,21 @@ document.addEventListener('click',async ev=>{
  }
  if(ev.target.id==='jcValidate'&&currentAccount&&screen==='jobcard'&&((roleInfo().factory&&!roleInfo().office)||roleInfo().authoriser)){
    const errors=[];
-   if(!jobCardLookup||String($('jcWo')?.value||'').trim()!==jobCardLookup.wo)errors.push('a verified job lookup matching the entered work order');
-   if(!($('jcOp')&&$('jcOp').value!==''))errors.push('an operation');
-   if(!String($('jcMachinist')?.value||'').trim())errors.push('the operator');
-   const qty=String($('jcQty')?.value||''),minutes=String($('jcTime')?.value||'');
-   if(qty===''||!Number.isSafeInteger(Number(qty))||Number(qty)<0)errors.push('a valid whole-number quantity');
-   if(minutes===''||!Number.isSafeInteger(Number(minutes))||Number(minutes)<0)errors.push('valid whole-number minutes');
+   if(!jobCardLookup||String($('jcWo')?.value||'').trim()!==jobCardLookup.wo)errors.push('verified work order lookup');
+   if(!($('jcOp')&&$('jcOp').value!==''))errors.push('operation selection');
+   if(!String($('jcMachinist')?.value||'').trim())errors.push('operator');
+   if(!$('jcSessionDate')?.value)errors.push('session date');
+   const setup=jobCardTimeCheck('jcSetup'),run=jobCardTimeCheck('jcRun');
+   if(!setup.used&&!run.used)errors.push('at least one set-up or machining session');
+   if(setup.used){if(!setup.valid)errors.push('valid set-up start, finish and breaks');if(!String($('jcSetupInitials')?.value||'').trim())errors.push('set-up initials');}
+   if(run.used){
+     if(!run.valid)errors.push('valid machining start, finish and breaks');
+     const good=jobCardWholeNumber($('jcGood')?.value),reject=jobCardWholeNumber($('jcReject')?.value);
+     if(good===null||reject===null)errors.push('good and reject quantities (whole numbers)');
+     if(!String($('jcInspection')?.value||'').trim())errors.push('inspection initials');
+   }
    const box=$('jcValidation');
-   if(box)box.textContent=errors.length?'Entry incomplete: '+errors.join(', ')+'. No information was saved.':'Preview fields are complete. No information was saved or submitted.';
+   if(box)box.textContent=errors.length?'Entry incomplete: '+errors.join(', ')+'. Nothing saved.':'Time record preview validated. Nothing saved or submitted.';
    return;
  }
  if(ev.target.id==='openJobs'&&currentAccount){screen=roleInfo().office?'livejobs':'jobs';render();if(screen==='livejobs'&&!Array.isArray(liveJobs))await loadLiveJobs();return;}
