@@ -19,7 +19,7 @@ nav{display:flex;border-bottom:1px solid #dde7ed;background:#fff;position:sticky
 <script src="https://alcdn.msauth.net/browser/2.35.0/js/msal-browser.min.js" defer></script>
 </head>
 <body>
-<div class="app"><header><div class="mark">EP</div><div><strong>EDWARDS PRECISION</strong><small>MOBILE · PRIVATE PILOT · B51</small></div></header>
+<div class="app"><header><div class="mark">EP</div><div><strong>EDWARDS PRECISION</strong><small>MOBILE · PRIVATE PILOT · B52</small></div></header>
 <nav id="nav" hidden aria-label="Main navigation"><button data-page="home" class="active">Home</button><button data-page="overview" data-office-section hidden>Overview</button><button data-page="jobs">Jobs</button><button data-page="myProgress" data-factory-only hidden>In Progress</button><button data-page="jobcard" data-factory-section hidden>Job Card</button><button data-page="machineReports" data-office-section hidden>Machines</button><button data-page="priorities" data-office-section hidden>Priorities</button><button data-page="duedates" data-office-section hidden>Due Dates</button><button data-page="parts" data-office-section hidden>Parts</button><button data-page="ncr">NCRs</button><button data-page="more">More</button></nav>
 <main>
 <div class="notice"><b>TEST ONLY — FICTIONAL INFORMATION.</b> This page verifies Microsoft sign-in and makes a protected request to the Render development API. All returned jobs are fictional. No live customer data, Smartsheet access, purchasing or SDNR actions are enabled.</div>
@@ -58,7 +58,7 @@ function roleInfo(){
 }
 function formatDate(v){if(!/^\d{4}-\d{2}-\d{2}$/.test(String(v||'')))return String(v||'');const [y,m,d]=v.split('-');return `${d}-${m}-${y}`;}
 function makeJob(j){return `<article class="card job" tabindex="0" role="button" data-job="${escapeHTML(j.wo)}" aria-label="View ${escapeHTML(j.wo)}"><div class="row"><h2>${escapeHTML(j.wo)}</h2><span class="tag ${j.status==='Overdue'?'warn':''}">${escapeHTML(j.status)}</span></div><p><b>${escapeHTML(j.description||j.part)}</b></p><p>${escapeHTML(j.operationCount!=null?j.operationCount+' operations':j.op)} · Due ${escapeHTML(formatDate(j.dueDate||j.due))}</p></article>`;}
-function makeOperation(op){return `<article class="card job" role="button" tabindex="0" data-operation="${escapeHTML(op.id)}" aria-label="View operation ${escapeHTML(op.id)}"><div class="row"><h2>${escapeHTML(op.op)} · ${escapeHTML(op.description)}</h2><span class="tag">${escapeHTML(op.status)}</span></div><p>${escapeHTML(op.partNumber)} · ${escapeHTML(op.wo)} · Due ${escapeHTML(formatDate(op.dueDate))}</p><p>${escapeHTML(op.machinist)} · ${Number(op.progress)}% complete</p></article>`;}
+function makeOperation(op){return `<article class="card job" role="button" tabindex="0" data-operation="${escapeHTML(op.id)}" aria-label="View operation ${escapeHTML(op.id)}"><div class="row"><h2>${escapeHTML(op.op)} · ${escapeHTML(op.description)}</h2><span class="tag">${escapeHTML(op.status)}</span></div><p>${escapeHTML(op.partNumber)} · ${escapeHTML(op.wo)} · Due ${escapeHTML(formatDate(op.dueDate))}</p><p>${escapeHTML(op.machinist||'Assigned operator')} · ${Number.isFinite(op.progress)?Number(op.progress)+'% complete':'Progress not yet recorded'}</p></article>`;}
 
 function myInProgressOperations(){
  if(!Array.isArray(factoryOperations))return [];
@@ -310,7 +310,7 @@ function render(){
   const op=factoryOperation && factoryOperation.id===chosenOperation?factoryOperation:null;
   html=`<button class="back" id="backOperations">← Back to operations</button>`;
   if(!op) html+=`<div class="card"><p>${escapeHTML(factoryMessage)}</p></div>`;
-  else html+=`<div class="card"><h2>${escapeHTML(op.id)}</h2><p><b>Part:</b> ${escapeHTML(op.partNumber)} · Rev ${escapeHTML(op.revision)}</p><p><b>Operation:</b> ${escapeHTML(op.op)} · ${escapeHTML(op.description)}</p><p><b>Assigned machinist:</b> ${escapeHTML(op.machinist)}</p><p><b>Due:</b> ${escapeHTML(formatDate(op.dueDate))}</p><p><b>Status:</b> ${escapeHTML(op.status)}</p><p><b>Progress:</b> ${Number(op.progress)}%</p><progress max="100" value="${Number(op.progress)}" style="width:100%"></progress></div><p class="quiet">Drawing attachments, time recording and status editing are not enabled.</p>`;
+  else html+=`<div class="card"><h2>${escapeHTML(op.id)}</h2><p><b>Part:</b> ${escapeHTML(op.partNumber)} · Rev ${escapeHTML(op.revision)}</p><p><b>Operation:</b> ${escapeHTML(op.op)} · ${escapeHTML(op.description)}</p><p><b>Assigned machinist:</b> ${escapeHTML(op.machinist)}</p><p><b>Due:</b> ${escapeHTML(formatDate(op.dueDate))}</p><p><b>Status:</b> ${escapeHTML(op.status)}</p><p><b>Progress:</b> ${Number.isFinite(op.progress)?Number(op.progress)+'%':'Not recorded'}</p>${Number.isFinite(op.progress)?'<progress max="100" value="'+Number(op.progress)+'" style="width:100%"></progress>':''}</div><p class="quiet">Drawing attachments, time recording and status editing are not enabled.</p>`;
  }
  if(screen==='overview') html=r.office?liveSectionHTML('overview'):'<div class="card">Office access required.</div>';
  if(screen==='priorities') html=r.office?liveSectionHTML('priorities'):'<div class="card">Office access required.</div>';
