@@ -146,8 +146,20 @@ function render(){
  if(screen==='livejobs')html=r.office?`<button class="back" id="backLiveMore">← Back to More</button><div class="card"><h2>Private Open Orders (read-only)</h2><p>${escapeHTML(liveMessage)}</p><button class="btn" id="refreshLiveJobs">Refresh live jobs</button></div>${Array.isArray(liveJobs)?`${liveJobSummaryHTML()}<label for="liveJobSearch" class="quiet">Find work order, part or description</label><input id="liveJobSearch" class="search" type="search" value="${escapeHTML(liveSearch)}" placeholder="Search private jobs" autocomplete="off"><label for="liveJobFilter" class="quiet">Show jobs</label><select id="liveJobFilter" class="search"><option value="all" ${liveFilter==='all'?'selected':''}>All · Due date order</option><option value="late" ${liveFilter==='late'?'selected':''}>Overdue</option><option value="soon" ${liveFilter==='soon'?'selected':''}>Due within 7 days</option></select><div id="filteredLiveJobs">${filteredLiveJobsHTML()}</div>`:''}`:'<div class="card">Office permission required.</div>';
  if(screen==='livedetail'){
    html=`<button class="back" id="backLiveJobs">← Back to private Jobs</button>`;
-   if(!r.office || !liveJob || liveJob.wo!==chosenLiveWo)html+=`<div class="card"><p>${escapeHTML(liveMessage)}</p></div>`;
-   else html+=`<div class="card"><h2>${escapeHTML(liveJob.wo)}</h2><p><b>Part:</b> ${escapeHTML(liveJob.partNumber||'')} · Rev ${escapeHTML(liveJob.revision||'')}</p><p><b>Description:</b> ${escapeHTML(liveJob.description||'')}</p><p><b>Due:</b> ${escapeHTML(formatDate(liveJob.dueDate))}</p><p><b>Status:</b> ${escapeHTML(liveJob.status||'')}</p></div><h2>Operations</h2>${(liveJob.operations||[]).map(op=>`<div class="card"><div class="row"><h2>${escapeHTML(op.op||'')}</h2><span class="tag">${escapeHTML(op.status||'')}</span></div><p>Sequence ${escapeHTML(op.seq||'')} · Machine ${escapeHTML(op.machine||'')}</p><p>Due ${escapeHTML(formatDate(op.dueDate))}</p></div>`).join('')}<p class="quiet">Private Office-only, read-only production data. Editing is disabled.</p>`;
+   if(!r.office || !liveJob || liveJob.wo!==chosenLiveWo){
+     html+=`<div class="card" role="status"><p>${escapeHTML(liveMessage)}</p>${r.office&&chosenLiveWo?'<button class="btn" id="retryLiveDetail">Retry job details</button>':''}</div>`;
+   }else{
+     const safeValue=value=>value==null||String(value).trim()===''?'—':escapeHTML(value);
+     const dueKey=liveDueKey(liveJob),isOverdue=dueKey!=='9999-12-31'&&dueKey<liveTodayKey();
+     const ops=liveJob.operations;
+     html+=`<div class="card"><div class="row"><h2>Work order ${escapeHTML(liveJob.wo)}</h2><span class="tag ${isOverdue?'warn':''}">${safeValue(liveJob.status)}</span></div><p><b>Part number:</b> ${safeValue(liveJob.partNumber)}</p><p><b>Revision:</b> ${safeValue(liveJob.revision)}</p><p><b>Description:</b> ${safeValue(liveJob.description)}</p><p><b>Due date:</b> <span class="${isOverdue?'late-due':''}">${safeValue(formatDate(liveJob.dueDate))}${isOverdue?' · Overdue':''}</span></p><p><b>Operations:</b> ${ops.length}</p></div><h2>Production operations</h2>`;
+     if(!ops.length)html+='<div class="card"><p>No operations were returned for this job.</p></div>';
+     else html+=ops.map((op,index)=>{
+       const opKey=liveDueKey(op),opLate=opKey!=='9999-12-31'&&opKey<liveTodayKey();
+       return `<div class="card" aria-label="Operation ${index+1}"><div class="row"><h2>${safeValue(op.op)} <span class="quiet">· ${index+1} of ${ops.length}</span></h2><span class="tag ${opLate?'warn':''}">${safeValue(op.status)}</span></div><p><b>Sequence:</b> ${safeValue(op.seq)}</p><p><b>Machine:</b> ${safeValue(op.machine)}</p><p><b>Due:</b> <span class="${opLate?'late-due':''}">${safeValue(formatDate(op.dueDate))}${opLate?' · Overdue':''}</span></p></div>`;
+     }).join('');
+     html+='<p class="quiet">Private Office-only production data · Read-only · Editing disabled</p>';
+   }
  }
  $('content').innerHTML=html;
 }
@@ -268,6 +280,7 @@ document.addEventListener('click',async ev=>{
  if(ev.target.id==='refreshLiveJobs'&&currentAccount&&roleInfo().office){await loadLiveJobs();return;}
  if(ev.target.id==='backLiveMore'){screen='more';render();return;}
  if(ev.target.id==='backLiveJobs'){screen='livejobs';render();return;}
+ if(ev.target.id==='retryLiveDetail'&&currentAccount&&roleInfo().office&&chosenLiveWo){await loadLiveDetail(chosenLiveWo);return;}
  const liveTarget=ev.target.closest('[data-live-wo]');
  if(liveTarget&&currentAccount&&roleInfo().office){await loadLiveDetail(liveTarget.dataset.liveWo);return;}
  if(ev.target.id==='testPrivateAuth'&&application&&currentAccount){
@@ -342,7 +355,7 @@ document.addEventListener('click',async ev=>{
  }
  if(ev.target.id==='signout'&&application){ev.target.disabled=true;try{await application.logoutRedirect({account:application.getActiveAccount(),postLogoutRedirectUri:redirectUri});}catch(e){ev.target.disabled=false;alert('Sign-out could not start: '+(e.errorCode||e.message||'Unknown error'));}}
 });
-document.addEventListener('keydown',ev=>{if((ev.key==='Enter'||ev.key===' ')&&ev.target.matches('[data-job], [data-operation]')){ev.preventDefault();ev.target.click();}});
+document.addEventListener('keydown',ev=>{if((ev.key==='Enter'||ev.key===' ')&&ev.target.matches('[data-job], [data-operation], [data-live-wo]')){ev.preventDefault();ev.target.click();}});
 window.addEventListener('load',async()=>{
  if(typeof msal==='undefined'){status('Microsoft authentication library unavailable. Check network access or content blockers.');return;}
  try{
