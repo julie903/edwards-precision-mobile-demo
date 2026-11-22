@@ -20,7 +20,7 @@ nav{display:flex;border-bottom:1px solid #dde7ed;background:#fff;position:sticky
 </head>
 <body>
 <div class="app"><header><div class="mark">EP</div><div><strong>EDWARDS PRECISION</strong><small>MOBILE · OFFICE DEVELOPMENT</small></div></header>
-<nav id="nav" hidden aria-label="Main navigation"><button data-page="home" class="active">Home</button><button data-page="overview" data-office-section hidden>Overview</button><button data-page="jobs">Jobs</button><button data-page="jobcard" data-factory-section hidden>Job Card</button><button data-page="machineReports" data-office-section hidden>Machines</button><button data-page="priorities" data-office-section hidden>Priorities</button><button data-page="duedates" data-office-section hidden>Due Dates</button><button data-page="parts" data-office-section hidden>Parts</button><button data-page="ncr">NCRs</button><button data-page="more">More</button></nav>
+<nav id="nav" hidden aria-label="Main navigation"><button data-page="home" class="active">Home</button><button data-page="overview" data-office-section hidden>Overview</button><button data-page="jobs">Jobs</button><button data-page="myProgress" data-factory-only hidden>In Progress</button><button data-page="jobcard" data-factory-section hidden>Job Card</button><button data-page="machineReports" data-office-section hidden>Machines</button><button data-page="priorities" data-office-section hidden>Priorities</button><button data-page="duedates" data-office-section hidden>Due Dates</button><button data-page="parts" data-office-section hidden>Parts</button><button data-page="ncr">NCRs</button><button data-page="more">More</button></nav>
 <main>
 <div class="notice"><b>TEST ONLY — FICTIONAL INFORMATION.</b> This page verifies Microsoft sign-in and makes a protected request to the Render development API. All returned jobs are fictional. No live customer data, Smartsheet access, purchasing or SDNR actions are enabled.</div>
 <section id="loginPanel"><p class="eyebrow">MICROSOFT 365</p><h1>Employee sign-in</h1><p class="muted">Only accounts assigned to Edwards Precision Mobile should be able to complete Microsoft authentication. The application also checks the returned tenant and role.</p><div class="card" id="status" role="status" aria-live="polite">Initialising Microsoft sign-in…</div><button class="btn" id="signin" disabled>Sign in with Microsoft 365</button></section>
@@ -43,7 +43,7 @@ const privateOrdersUrl='https://mobile.edwardsprecision.co.uk:9443/api/orders';
 const $=id=>document.getElementById(id);
 let application=null, currentAccount=null, roles=[], screen='home', chosenJob=null;
 let apiJobs=null, apiJobDetails=null, apiMessage='Not loaded', jobFilter='';
-let factoryOperations=null, factoryOperation=null, factoryMessage='Not loaded', chosenOperation=null;
+let factoryOperations=null, factoryOperation=null, factoryMessage='Not loaded', chosenOperation=null, operationReturnScreen='jobs';
 let liveJobs=null, liveJob=null, liveMessage='Not requested', liveSearch='', chosenLiveWo=null, liveFilter='all', liveReturnScreen='livejobs', partSearch='';
 let jobCardLookup=null,jobCardMessage='No job loaded';
 const jobCardCheckStamps={calibration:null,drawing:null};
@@ -64,6 +64,18 @@ function formatDate(v){if(!/^\d{4}-\d{2}-\d{2}$/.test(String(v||'')))return Stri
 function makeJob(j){return `<article class="card job" tabindex="0" role="button" data-job="${escapeHTML(j.wo)}" aria-label="View ${escapeHTML(j.wo)}"><div class="row"><h2>${escapeHTML(j.wo)}</h2><span class="tag ${j.status==='Overdue'?'warn':''}">${escapeHTML(j.status)}</span></div><p><b>${escapeHTML(j.description||j.part)}</b></p><p>${escapeHTML(j.operationCount!=null?j.operationCount+' operations':j.op)} · Due ${escapeHTML(formatDate(j.dueDate||j.due))}</p></article>`;}
 function makeOperation(op){return `<article class="card job" role="button" tabindex="0" data-operation="${escapeHTML(op.id)}" aria-label="View operation ${escapeHTML(op.id)}"><div class="row"><h2>${escapeHTML(op.op)} · ${escapeHTML(op.description)}</h2><span class="tag">${escapeHTML(op.status)}</span></div><p>${escapeHTML(op.partNumber)} · ${escapeHTML(op.wo)} · Due ${escapeHTML(formatDate(op.dueDate))}</p><p>${escapeHTML(op.machinist)} · ${Number(op.progress)}% complete</p></article>`;}
 
+function myInProgressOperations(){
+ if(!Array.isArray(factoryOperations))return [];
+ return factoryOperations.filter(op=>{
+   const state=String(op.status||'').trim().toLowerCase().replace(/[-_]+/g,' ');
+   return state==='in progress'||state==='started';
+ });
+}
+function myInProgressHTML(){
+ if(!Array.isArray(factoryOperations))return '<div class="card"><p>Load your assigned operations to see jobs currently in progress.</p></div>';
+ const active=myInProgressOperations();
+ return active.length?active.map(makeOperation).join(''):'<div class="card"><p>No assigned operations currently marked In progress in the fictional Factory pilot.</p></div>';
+}
 function filteredJobsHTML(){
  if(!Array.isArray(apiJobs)) return '';
  const q=jobFilter.trim().toLowerCase();
@@ -271,16 +283,18 @@ function render(){
    }
  }
  $('roleLabel').textContent=r.label;
- $('heading').textContent=({home:'Good morning',jobcard:'Job Card Entry · preview',overview:'Production overview',priorities:'Production priorities',duedates:'Due date register',parts:'Part finder',machineReports:'Machine job reports',jobs:'Open Orders',livejobs:'Private Open Orders',livedetail:'Private job details',detail:'Job details',factory:'Factory operations',operation:'Operation detail',ncr:'Non-conformances',more:'More tools'})[screen];
+ $('heading').textContent=({home:'Good morning',jobcard:'Job Card Entry · preview',overview:'Production overview',priorities:'Production priorities',duedates:'Due date register',parts:'Part finder',machineReports:'Machine job reports',myProgress:'My Jobs in Progress',jobs:'Open Orders',livejobs:'Private Open Orders',livedetail:'Private job details',detail:'Job details',factory:'Factory operations',operation:'Operation detail',ncr:'Non-conformances',more:'More tools'})[screen];
  $('subtitle').textContent=(screen==='detail'||screen==='operation')?'Fictional details — read only':`Signed in as ${currentAccount.name||currentAccount.username||'employee'}`;
  document.querySelectorAll('[data-page]').forEach(b=>b.classList.toggle('active',b.dataset.page===(r.office&&(screen==='livejobs'||screen==='livedetail')?'jobs':screen)));
  document.querySelectorAll('[data-office-section]').forEach(b=>b.hidden=!r.office);
  document.querySelectorAll('[data-factory-section]').forEach(b=>b.hidden=!(r.factory&&!r.office)&&!r.authoriser);
+ document.querySelectorAll('[data-factory-only]').forEach(b=>b.hidden=!(r.factory&&!r.office));
  if(r.office){const jobsTab=document.querySelector('[data-page="jobs"]');if(jobsTab)jobsTab.textContent='Jobs';}
  let html='';
  if(screen==='home') html=r.office?`<div class="card"><h2>Live Open Orders · read-only</h2><p>Access private production jobs through the iMac and NetBird. Office permissions are checked by the private server.</p><button class="btn" id="openLiveReadOnly">Open live Jobs</button></div><div class="card"><h2>Production access</h2><p>Live job viewing is read-only. Editing, purchasing and issuing SDNRs are not available in this mobile pilot.</p></div>`:`<div class="card"><h2>Microsoft sign-in active</h2><p>${escapeHTML(r.label)} access recognised.</p><button class="btn" id="openJobs">Open my demo operations</button></div><div class="card"><p>Factory operations are fictional in this pilot; production access is not enabled.</p></div>`;
  if(screen==='home' && r.authoriser) html+='<div class="card"><h2>Factory Job Card preview</h2><p>Administrator-only layout preview. No Factory permissions are granted and submission is disabled.</p><button class="btn secondary" id="openJobCardPreview">Preview Job Card Entry</button></div>';
- if(screen==='home' && !r.office) html=`<div class="card"><h2>My assigned operations</h2><p>Open Jobs to load your own fictional operations securely. The full Open Orders list is not available to Factory staff.</p><button class="btn secondary" id="openJobCardPreview">Preview Job Card Entry</button></div>`;
+ if(screen==='home' && !r.office) html=`<div class="card"><h2>My Jobs in Progress</h2><p>Find active operations assigned to your account in one tap. Fictional Factory pilot records only.</p><button class="btn" id="openMyProgress">View my in-progress jobs</button></div>`+`<div class="card"><h2>My assigned operations</h2><p>Open Jobs to load your own fictional operations securely. The full Open Orders list is not available to Factory staff.</p><button class="btn secondary" id="openJobCardPreview">Preview Job Card Entry</button></div>`;
+ if(screen==='myProgress') html=(r.factory&&!r.office)?`<div class="card"><h2>My Jobs in Progress · pilot</h2><p>Only operations assigned to your signed-in Factory account and marked In progress or Started by the protected Factory demo service are shown. These are fictional records, not the live production schedule.</p><p role="status">${escapeHTML(factoryMessage)}</p><button class="btn" id="refreshMyProgress">Refresh my jobs</button><p class="quiet">Tap an operation to see its job details. Live Job Card auto-fill requires a separately authorised Factory gateway.</p></div>${myInProgressHTML()}`:'<div class="card">Factory role required.</div>';
  if(screen==='jobs' && !r.office) html=`<div class="card"><p>Factory access is limited to operations assigned to your Microsoft account, never the complete Open Orders list.</p><p>${escapeHTML(factoryMessage)}</p><button class="btn" id="loadFactory">Load my demo operations</button></div>`+(Array.isArray(factoryOperations)?factoryOperations.map(makeOperation).join(''):'');
  if(screen==='jobs' && r.office) html=`<div class="card"><p>${escapeHTML(apiMessage)}</p><button class="btn" id="loadJobs">Refresh authorised demo jobs</button></div>`+(Array.isArray(apiJobs)?`<label for="jobSearch" class="quiet">Search fictional jobs by WO, part or customer</label><input id="jobSearch" class="search" type="search" placeholder="Search jobs" value="${escapeHTML(jobFilter)}" autocomplete="off"><div id="filteredJobs">${filteredJobsHTML()}</div>`:'');
  if(screen==='detail'){
@@ -441,7 +455,9 @@ function showSignedIn(account){
  render();
 }
 document.addEventListener('click',async ev=>{
- const nav=ev.target.closest('[data-page]');if(nav&&currentAccount){const page=nav.dataset.page;if(page==='jobcard'&&!((roleInfo().factory&&!roleInfo().office)||roleInfo().authoriser))return;if(['overview','priorities','duedates','parts','machineReports'].includes(page)&&!roleInfo().office)return;screen=(page==='jobs'&&roleInfo().office)?'livejobs':page;chosenJob=null;chosenOperation=null;render();if(['livejobs','overview','priorities','duedates','parts'].includes(screen)&&!Array.isArray(liveJobs))await loadLiveJobsForSection();return;}
+ const nav=ev.target.closest('[data-page]');if(nav&&currentAccount){const page=nav.dataset.page;if(page==='jobcard'&&!((roleInfo().factory&&!roleInfo().office)||roleInfo().authoriser))return;if(page==='myProgress'&&!(roleInfo().factory&&!roleInfo().office))return;if(['overview','priorities','duedates','parts','machineReports'].includes(page)&&!roleInfo().office)return;screen=(page==='jobs'&&roleInfo().office)?'livejobs':page;chosenJob=null;chosenOperation=null;render();if(screen==='myProgress'&&!Array.isArray(factoryOperations))await loadFactory();if(['livejobs','overview','priorities','duedates','parts'].includes(screen)&&!Array.isArray(liveJobs))await loadLiveJobsForSection();return;}
+ if(ev.target.id==='openMyProgress'&&currentAccount&&roleInfo().factory&&!roleInfo().office){screen='myProgress';render();if(!Array.isArray(factoryOperations))await loadFactory();return;}
+ if(ev.target.id==='refreshMyProgress'&&currentAccount&&roleInfo().factory&&!roleInfo().office){await loadFactory();return;}
  if(ev.target.id==='machineGoJobs'&&roleInfo().office){screen='livejobs';render();if(!Array.isArray(liveJobs))await loadLiveJobs();return;}
  if(ev.target.id==='openJobCardPreview'&&currentAccount&&((roleInfo().factory&&!roleInfo().office)||roleInfo().authoriser)){screen='jobcard';render();return;}
  const jcJump=ev.target.closest('[data-jc-wo]');
@@ -516,9 +532,9 @@ document.addEventListener('click',async ev=>{
  if(ev.target.id==='openDemoJobs'&&currentAccount&&roleInfo().office){screen='jobs';render();return;}
  if(ev.target.id==='previewFactory'&&currentAccount){screen='factory';render();return;}
  if(ev.target.id==='loadFactory'&&currentAccount){await loadFactory();return;}
- if(ev.target.id==='backOperations'){screen=roleInfo().office?'factory':'jobs';render();return;}
+ if(ev.target.id==='backOperations'){screen=roleInfo().office?'factory':(operationReturnScreen==='myProgress'?'myProgress':'jobs');render();return;}
  const operation=ev.target.closest('[data-operation]');
- if(operation&&currentAccount){chosenOperation=operation.dataset.operation;screen='operation';await loadFactoryDetail(chosenOperation);return;}
+ if(operation&&currentAccount){operationReturnScreen=screen;chosenOperation=operation.dataset.operation;screen='operation';await loadFactoryDetail(chosenOperation);return;}
  const job=ev.target.closest('[data-job]');if(job&&currentAccount&&roleInfo().office){chosenJob=job.dataset.job;screen='detail';await loadDetail(chosenJob);return;}
  if(ev.target.id==='loadJobs'&&currentAccount&&roleInfo().office){await loadJobs();return;}
  if(ev.target.id==='back'){screen='jobs';render();return;}
