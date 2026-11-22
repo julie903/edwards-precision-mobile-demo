@@ -247,7 +247,7 @@ document.addEventListener('keydown',ev=>{if((ev.key==='Enter'||ev.key===' ')&&ev
 window.addEventListener('load',async()=>{
  if(typeof msal==='undefined'){status('Microsoft authentication library unavailable. Check network access or content blockers.');return;}
  try{
-  application=new msal.PublicClientApplication({auth:{clientId,authority:'https://login.microsoftonline.com/'+tenantId,redirectUri,navigateToLoginRequestUrl:false},cache:{cacheLocation:'sessionStorage',storeAuthStateInCookie:false}});
+  application=new msal.PublicClientApplication({auth:{clientId,authority:'https://login.microsoftonline.com/'+tenantId,redirectUri,navigateToLoginRequestUrl:true},cache:{cacheLocation:'sessionStorage',storeAuthStateInCookie:false}});
   const result=await application.handleRedirectPromise();
   const account=(result&&result.account)||application.getAllAccounts()[0]||null;
   if(account){application.setActiveAccount(account);showSignedIn(account);}else{status('Not signed in. Select the button to sign in with your Edwards Precision work account.');}
