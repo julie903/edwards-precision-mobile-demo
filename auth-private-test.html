@@ -12,7 +12,7 @@ header{background:#142c40;color:#fff;padding:calc(18px + env(safe-area-inset-top
 main{padding:17px;flex:1}.notice{font-size:12px;background:#fff7e8;color:#795621;border:1px solid #e6bf71;border-radius:10px;line-height:1.55;padding:12px;margin-bottom:20px}
 .eyebrow{font-size:11px;color:#297b9e;font-weight:800;letter-spacing:1.5px;margin:0 0 7px}h1{font-size:24px;letter-spacing:-.7px;margin:0 0 8px}.muted{font-size:13px;line-height:1.5;color:#607487}.card{background:#fff;border:1px solid #dfe8ef;border-radius:12px;padding:15px;margin:11px 0}.card h2{font-size:16px;margin:0 0 8px}.card p{font-size:13px;line-height:1.5;margin:5px 0;color:#546d80}.row{display:flex;align-items:center;justify-content:space-between;gap:10px}.tag{background:#e7f2f8;color:#216e90;font-weight:750;font-size:11px;padding:5px 8px;border-radius:7px}.tag.warn{background:#fff0e8;color:#ad5b33}.late-due{color:#a53623}
 .btn{background:#19769a;border:0;color:#fff;font-size:15px;font-weight:700;padding:13px 16px;border-radius:10px;cursor:pointer;width:100%;margin-top:10px}.btn.secondary{background:#fff;border:1px solid #aec5d2;color:#1d526c}.btn:disabled{opacity:.55;cursor:not-allowed}
-nav{display:flex;border-top:1px solid #dde7ed;background:#fff;position:sticky;bottom:0;padding-bottom:env(safe-area-inset-bottom)}nav button{flex:1;background:transparent;border:0;padding:14px 4px;color:#63798d;font-weight:650;font-size:13px;cursor:pointer}nav button.active{color:#147699;border-top:3px solid #147699;padding-top:11px}
+nav{display:flex;border-top:1px solid #dde7ed;background:#fff;position:sticky;bottom:0;padding-bottom:env(safe-area-inset-bottom);overflow-x:auto}nav button{flex:0 0 auto;min-width:75px;background:transparent;border:0;padding:14px 6px;color:#63798d;font-weight:650;font-size:12px;cursor:pointer}nav button[hidden]{display:none}nav button.active{color:#147699;border-top:3px solid #147699;padding-top:11px}
 .stats{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:15px}.stat{background:#fff;border:1px solid #dde7ee;padding:15px;border-radius:12px}.stat b{display:block;font-size:24px}.stat span{font-size:12px;color:#677b8a}.job{cursor:pointer}.job:focus-visible{outline:3px solid #147699}.back{background:none;border:0;color:#147699;font-weight:700;font-size:14px;padding:10px 0;cursor:pointer}
 #status{overflow-wrap:anywhere}.idline{font-size:12px;word-break:break-word;color:#4c667a}.quiet{font-size:12px;color:#718391}.hide{display:none!important}.search{display:block;width:100%;font:inherit;font-size:16px;border:1px solid #cbdbe5;border-radius:10px;padding:12px;margin:12px 0;background:#fff}
 </style>
@@ -27,7 +27,7 @@ nav{display:flex;border-top:1px solid #dde7ed;background:#fff;position:sticky;bo
 <div class="row"><p class="eyebrow" id="roleLabel"></p><span class="tag">DEVELOPMENT</span></div><h1 id="heading">Home</h1><p class="muted" id="subtitle"></p><div id="content"></div>
 </section>
 </main>
-<nav id="nav" hidden aria-label="Main navigation"><button data-page="home" class="active">Home</button><button data-page="jobs">Jobs</button><button data-page="ncr">NCRs</button><button data-page="more">More</button></nav>
+<nav id="nav" hidden aria-label="Main navigation"><button data-page="home" class="active">Home</button><button data-page="overview" data-office-section hidden>Overview</button><button data-page="jobs">Jobs</button><button data-page="priorities" data-office-section hidden>Priorities</button><button data-page="ncr">NCRs</button><button data-page="more">More</button></nav>
 </div>
 <script>
 (function(){
@@ -102,6 +102,15 @@ function liveJobSummaryHTML(){
  const upcoming=liveJobs.filter(m.dueSoon).length;
  return `<div class="card" aria-label="Live Jobs summary"><div class="row"><strong>${liveJobs.length} open jobs</strong><span class="tag ${late?'warn':''}">${late} overdue</span></div><p>${upcoming} due within the next 7 days · Read-only</p></div>`;
 }
+function liveSectionHTML(kind){
+ if(!Array.isArray(liveJobs))return '<div class="card"><p>Live Orders have not loaded. Connect NetBird and try again.</p><button class="btn" id="reloadSection">Load protected Orders</button></div>';
+ const m=liveJobMetrics();
+ const late=liveJobs.filter(m.overdue).sort((a,b)=>liveDueKey(a).localeCompare(liveDueKey(b)));
+ const upcoming=liveJobs.filter(m.dueSoon).sort((a,b)=>liveDueKey(a).localeCompare(liveDueKey(b)));
+ if(kind==='overview')return `<div class="card"><h2>Read-only production overview</h2><p>Last successfully loaded Open Orders; refresh for current values.</p><div class="stats"><div class="stat"><b>${liveJobs.length}</b><span>Open jobs</span></div><div class="stat"><b>${late.length}</b><span>Overdue</span></div><div class="stat"><b>${upcoming.length}</b><span>Due in 7 days</span></div><div class="stat"><b>${liveJobs.filter(j=>liveDueKey(j)==='9999-12-31').length}</b><span>Missing due dates</span></div></div><button class="btn" id="reloadSection">Refresh overview</button><button class="btn secondary" id="overviewGoJobs">Open all Jobs</button><button class="btn secondary" id="overviewGoPriorities">Open priorities</button></div>`;
+ const card=j=>`<article class="card job" tabindex="0" role="button" data-live-wo="${escapeHTML(j.wo)}" aria-label="View ${escapeHTML(j.wo)}"><div class="row"><h2>${escapeHTML(j.wo)}</h2><span class="tag">${escapeHTML(j.status||'Unspecified')}</span></div><p>${escapeHTML(j.partNumber||'')} · ${escapeHTML(j.description||'')}</p><p>Due ${escapeHTML(formatDate(j.dueDate))}</p></article>`;
+ return `<div class="card"><p>Due-date groups from the private read-only Orders feed, not a suggested production sequence.</p><button class="btn" id="reloadSection">Refresh priorities</button></div><h2>Overdue · ${late.length}</h2>${late.length?late.map(card).join(''):'<p>No overdue jobs in loaded data.</p>'}<h2>Due within 7 days · ${upcoming.length}</h2>${upcoming.length?upcoming.map(card).join(''):'<p>No upcoming jobs in loaded data.</p>'}`;
+}
 function filteredLiveJobsHTML(){
  if(!Array.isArray(liveJobs))return '';
  const q=liveSearch.trim().toLowerCase(),m=liveJobMetrics();
@@ -112,16 +121,17 @@ function render(){
  const r=roleInfo();
  const notice=document.querySelector('.notice');
  if(notice){
-   if(screen==='livejobs'||screen==='livedetail'){
+   if(screen==='livejobs'||screen==='livedetail'||screen==='overview'||screen==='priorities'){
      notice.textContent='PRIVATE READ-ONLY PILOT — Office-only access through the iMac over NetBird. Live data is shown only after independent server approval. No editing, purchasing or SDNR actions are available.';
    }else{
      notice.innerHTML='<b>TEST ONLY — FICTIONAL INFORMATION.</b> The normal demo Jobs screen uses fictional records. Production access is available only through the separate, restricted private pilot.';
    }
  }
  $('roleLabel').textContent=r.label;
- $('heading').textContent=({home:'Good morning',jobs:'Open Orders',livejobs:'Private Open Orders',livedetail:'Private job details',detail:'Job details',factory:'Factory operations',operation:'Operation detail',ncr:'Non-conformances',more:'More tools'})[screen];
+ $('heading').textContent=({home:'Good morning',overview:'Production overview',priorities:'Due dates',jobs:'Open Orders',livejobs:'Private Open Orders',livedetail:'Private job details',detail:'Job details',factory:'Factory operations',operation:'Operation detail',ncr:'Non-conformances',more:'More tools'})[screen];
  $('subtitle').textContent=(screen==='detail'||screen==='operation')?'Fictional details — read only':`Signed in as ${currentAccount.name||currentAccount.username||'employee'}`;
  document.querySelectorAll('[data-page]').forEach(b=>b.classList.toggle('active',b.dataset.page===(r.office&&(screen==='livejobs'||screen==='livedetail')?'jobs':screen)));
+ document.querySelectorAll('[data-office-section]').forEach(b=>b.hidden=!r.office);
  if(r.office){const jobsTab=document.querySelector('[data-page="jobs"]');if(jobsTab)jobsTab.textContent='Jobs';}
  let html='';
  if(screen==='home') html=r.office?`<div class="card"><h2>Live Open Orders · read-only</h2><p>Access private production jobs through the iMac and NetBird. Office permissions are checked by the private server.</p><button class="btn" id="openLiveReadOnly">Open live Jobs</button></div><div class="card"><h2>Production access</h2><p>Live job viewing is read-only. Editing, purchasing and issuing SDNRs are not available in this mobile pilot.</p></div>`:`<div class="card"><h2>Microsoft sign-in active</h2><p>${escapeHTML(r.label)} access recognised.</p><button class="btn" id="openJobs">Open my demo operations</button></div><div class="card"><p>Factory operations are fictional in this pilot; production access is not enabled.</p></div>`;
@@ -141,8 +151,11 @@ function render(){
   if(!op) html+=`<div class="card"><p>${escapeHTML(factoryMessage)}</p></div>`;
   else html+=`<div class="card"><h2>${escapeHTML(op.id)}</h2><p><b>Part:</b> ${escapeHTML(op.partNumber)} · Rev ${escapeHTML(op.revision)}</p><p><b>Operation:</b> ${escapeHTML(op.op)} · ${escapeHTML(op.description)}</p><p><b>Assigned machinist:</b> ${escapeHTML(op.machinist)}</p><p><b>Due:</b> ${escapeHTML(formatDate(op.dueDate))}</p><p><b>Status:</b> ${escapeHTML(op.status)}</p><p><b>Progress:</b> ${Number(op.progress)}%</p><progress max="100" value="${Number(op.progress)}" style="width:100%"></progress></div><p class="quiet">No drawing attachments, live jobs, time recording or status editing are enabled.</p>`;
  }
+ if(screen==='overview') html=r.office?liveSectionHTML('overview'):'<div class="card">Office access required.</div>';
+ if(screen==='priorities') html=r.office?liveSectionHTML('priorities'):'<div class="card">Office access required.</div>';
  if(screen==='ncr') html=`<div class="card"><h2>${r.office?'Office NCR review':'Factory NCR reporting'}</h2><p>${r.authoriser?'SDNR approval would be available to your authorised account only after the protected backend independently checks your identity and permissions.':r.office?'You may review NCRs but not issue SDNRs.':'Factory staff can raise NCRs and record actions for each defect in the future live system.'}</p><button class="btn" disabled>${r.authoriser?'Issue SDNR — disabled':r.office?'Review NCR — disabled':'Raise NCR — disabled'}</button></div>`;
  if(screen==='more') html=`<div class="card"><h2>Account</h2><p class="idline">${escapeHTML(currentAccount.username||'')}</p><p class="idline">Assigned claims: ${escapeHTML(roles.join(', '))}</p></div><div class="card"><h2>Access</h2><p>${r.office?'Office preview available':'Office preview unavailable'}</p><p>${r.factory?'Factory role assigned':r.authoriser?'Office functions inherited through authoriser policy':'Factory role not assigned'}</p><p>All live data and write actions remain disabled.</p></div>${r.office?'<div class="card"><h2>Factory operations preview</h2><p>Fictional API records only. This does not grant a Factory employee Office permissions.</p><button class="btn" id="previewFactory">Open Factory operations preview</button></div>':''}<div class="card"><h2>Private iMac authentication check</h2><p>Check your Microsoft Office permissions through private NetBird HTTPS. No customer records or Smartsheet access.</p><button class="btn" id="testPrivateAuth">Check private Microsoft access</button><p id="privateAuthResult" role="status" aria-live="polite">Not tested</p></div><div class="card"><h2>Protected Render API test</h2><p>Request an API token from Microsoft and test the development endpoint. Tokens are never displayed.</p><button class="btn" id="testApi">Test Microsoft API connection</button><p id="apiResult" role="status" aria-live="polite">Not tested</p></div><button class="btn secondary" id="signout">Sign out of Microsoft 365 test</button>`;
+ if(screen==='more' && r.office)html+='<div class="card"><h2>Other modules — not yet connected</h2><p>Collections, Material &amp; POs, Quotations &amp; RFQs and Statements are planned sections. They are not live or editable in this pilot.</p></div>';
  if(screen==='more' && r.office)html+='<div class="card"><h2>Development demo Jobs</h2><p>Fictional test records only, separate from live Open Orders.</p><button class="btn secondary" id="openDemoJobs">Open fictional Jobs</button></div>';
  if(screen==='more' && r.office)html+=`<div class="card"><h2>Private Open Orders · read-only pilot</h2><p>Uses the iMac over NetBird and your Microsoft Office authorisation. Customer names and machinist details are not returned. This pilot remains unavailable until the private server is separately approved for live Orders.</p><button class="btn secondary" id="openLiveReadOnly">Open private Jobs pilot</button></div>`;
  if(screen==='livejobs')html=r.office?`<button class="back" id="backLiveMore">← More tools</button><div class="card"><h2>Private Open Orders (read-only)</h2><p>${escapeHTML(liveMessage)}</p><button class="btn" id="refreshLiveJobs">Refresh live jobs</button></div>${Array.isArray(liveJobs)?`${liveJobSummaryHTML()}<label for="liveJobSearch" class="quiet">Find work order, part or description</label><input id="liveJobSearch" class="search" type="search" value="${escapeHTML(liveSearch)}" placeholder="Search private jobs" autocomplete="off"><label for="liveJobFilter" class="quiet">Show jobs</label><select id="liveJobFilter" class="search"><option value="all" ${liveFilter==='all'?'selected':''}>All · Due date order</option><option value="late" ${liveFilter==='late'?'selected':''}>Overdue</option><option value="soon" ${liveFilter==='soon'?'selected':''}>Due within 7 days</option></select><div id="filteredLiveJobs">${filteredLiveJobsHTML()}</div>`:''}`:'<div class="card">Office permission required.</div>';
@@ -224,6 +237,16 @@ async function loadLiveJobs(){
  catch(e){liveJobs=null;liveMessage=e instanceof TypeError?'Private connection unavailable; check NetBird':e.message||'Private read-only request failed';}
  render();
 }
+async function loadLiveJobsForSection(){
+ if(!roleInfo().office)return;
+ const target=screen;
+ if(target==='livejobs'){await loadLiveJobs();return;}
+ try{const body=await privateOrdersGet();if(!body)return;
+ if(!Array.isArray(body.jobs)||!Number.isInteger(body.count)||body.count!==body.jobs.length||body.jobs.length>500)throw Error('Unexpected job-list format');
+ liveJobs=body.jobs;liveMessage=body.count+' private read-only jobs retrieved';
+ }catch(e){liveJobs=null;liveMessage=e.message||'Private read-only Orders unavailable';}
+ if(screen===target)render();
+}
 async function loadLiveDetail(wo){
  if(!/^[A-Za-z0-9._-]{1,50}$/.test(wo))return;
  chosenLiveWo=wo;liveJob=null;liveMessage='Loading private job details…';screen='livedetail';render();
@@ -268,8 +291,11 @@ function showSignedIn(account){
  render();
 }
 document.addEventListener('click',async ev=>{
- const nav=ev.target.closest('[data-page]');if(nav&&currentAccount){const page=nav.dataset.page;screen=(page==='jobs'&&roleInfo().office)?'livejobs':page;chosenJob=null;chosenOperation=null;render();if(screen==='livejobs'&&!Array.isArray(liveJobs))await loadLiveJobs();return;}
+ const nav=ev.target.closest('[data-page]');if(nav&&currentAccount){const page=nav.dataset.page;if(['overview','priorities'].includes(page)&&!roleInfo().office)return;screen=(page==='jobs'&&roleInfo().office)?'livejobs':page;chosenJob=null;chosenOperation=null;render();if(['livejobs','overview','priorities'].includes(screen)&&!Array.isArray(liveJobs))await loadLiveJobsForSection();return;}
  if(ev.target.id==='openJobs'&&currentAccount){screen=roleInfo().office?'livejobs':'jobs';render();if(screen==='livejobs'&&!Array.isArray(liveJobs))await loadLiveJobs();return;}
+ if(ev.target.id==='reloadSection'&&currentAccount&&roleInfo().office){await loadLiveJobsForSection();return;}
+ if(ev.target.id==='overviewGoJobs'&&roleInfo().office){screen='livejobs';render();return;}
+ if(ev.target.id==='overviewGoPriorities'&&roleInfo().office){screen='priorities';render();return;}
  if(ev.target.id==='openDemoJobs'&&currentAccount&&roleInfo().office){screen='jobs';render();return;}
  if(ev.target.id==='previewFactory'&&currentAccount){screen='factory';render();return;}
  if(ev.target.id==='loadFactory'&&currentAccount){await loadFactory();return;}
