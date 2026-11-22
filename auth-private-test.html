@@ -94,12 +94,12 @@ document.addEventListener('input',ev=>{
 
 function jobCardWholeNumber(v){
  const t=String(v??'').trim();
- return t!==''&&/^\\d+$/.test(t)&&Number.isSafeInteger(Number(t))?Number(t):null;
+ return t!==''&&/^\d+$/.test(t)&&Number.isSafeInteger(Number(t))?Number(t):null;
 }
 function jobCardTimeCheck(prefix){
  const start=String($(prefix+'Start')?.value||''),end=String($(prefix+'Finish')?.value||''),breakText=String($(prefix+'Breaks')?.value||'');
  const used=!!(start||end||breakText);
- const mins=t=>/^\\d{2}:\\d{2}$/.test(t)?Number(t.slice(0,2))*60+Number(t.slice(3,5)):NaN;
+ const mins=t=>/^\d{2}:\d{2}$/.test(t)&&Number(t.slice(0,2))<24&&Number(t.slice(3,5))<60?Number(t.slice(0,2))*60+Number(t.slice(3,5)):NaN;
  const a=mins(start),b=mins(end),br=jobCardWholeNumber(breakText);
  const net=b-a-(br??NaN);
  return {used,valid:used&&Number.isFinite(net)&&net>=0&&b>a&&b<=1440,minutes:net};
