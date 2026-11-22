@@ -71,7 +71,7 @@ function filteredJobsHTML(){
  return shown.length?shown.map(makeJob).join(''):'<div class="card"><p>No fictional jobs match your search.</p></div>';
 }
 document.addEventListener('change',ev=>{
- if(/^jc(Setup|Run)(Start|Finish)(Hour|Minute|Period)$/.test(ev.target.id))jobCardUpdateTotals();
+ if(/^jc(Setup|Run)(Start|Finish)(Hour|Minute)$/.test(ev.target.id))jobCardUpdateTotals();
  if(['jcWo','jcOp','jcMachinist'].includes(ev.target.id))jobCardResetChecks();
  if(['jcCheckCalibration','jcCheckDrawing'].includes(ev.target.id)){
    const kind=ev.target.id==='jcCheckCalibration'?'calibration':'drawing';
@@ -87,7 +87,7 @@ document.addEventListener('change',ev=>{
  }
 });
 document.addEventListener('input',ev=>{
- if(/^jc(Setup|Run)(Start|Finish)(Hour|Minute|Period)$/.test(ev.target.id)||['jcSetupBreaks','jcRunBreaks','jcGood'].includes(ev.target.id))jobCardUpdateTotals();
+ if(/^jc(Setup|Run)(Start|Finish)(Hour|Minute)$/.test(ev.target.id)||['jcSetupBreaks','jcRunBreaks','jcGood'].includes(ev.target.id))jobCardUpdateTotals();
  if(ev.target.id==='jcSessionDate'){
    const label=$('jcDateDisplay');if(label)label.textContent='Selected date: '+(ev.target.value?formatDate(ev.target.value):'Not selected');
  }
@@ -114,16 +114,16 @@ document.addEventListener('input',ev=>{
 });
 
 function jobCardClockHTML(id,label){
- const hours=Array.from({length:12},(_,i)=>'<option value="'+(i+1)+'">'+(i+1)+'</option>').join('');
+ const hours=Array.from({length:24},(_,i)=>{const t=String(i).padStart(2,'0');return '<option value="'+t+'">'+t+'</option>'}).join('');
  const minutes=Array.from({length:60},(_,i)=>{const t=String(i).padStart(2,'0');return '<option value="'+t+'">'+t+'</option>'}).join('');
- return '<label class="quiet" for="'+id+'Hour">'+label+' (12-hour)</label><div class="row"><select class="search" id="'+id+'Hour" aria-label="'+label+' hour"><option value="">Hour</option>'+hours+'</select><select class="search" id="'+id+'Minute" aria-label="'+label+' minute"><option value="">Min</option>'+minutes+'</select><select class="search" id="'+id+'Period" aria-label="'+label+' AM or PM"><option value="">AM/PM</option><option value="AM">AM</option><option value="PM">PM</option></select></div>';
+ return '<label class="quiet" for="'+id+'Hour">'+label+' (24-hour)</label><div class="row"><select class="search" id="'+id+'Hour" aria-label="'+label+' hour"><option value="">Hour</option>'+hours+'</select><select class="search" id="'+id+'Minute" aria-label="'+label+' minute"><option value="">Min</option>'+minutes+'</select></div>';
 }
 function jobCardClockMinutes(id){
- const h=$(id+'Hour')?.value||'',m=$(id+'Minute')?.value||'',p=$(id+'Period')?.value||'';
- if(!h&&!m&&!p)return {used:false,valid:false,minutes:NaN};
+ const h=$(id+'Hour')?.value||'',m=$(id+'Minute')?.value||'';
+ if(!h&&m==='')return {used:false,valid:false,minutes:NaN};
  const hour=Number(h),minute=Number(m);
- if(!h||m===''||!['AM','PM'].includes(p)||!Number.isInteger(hour)||hour<1||hour>12||!Number.isInteger(minute)||minute<0||minute>59)return {used:true,valid:false,minutes:NaN};
- return {used:true,valid:true,minutes:(hour%12)*60+minute+(p==='PM'?720:0)};
+ if(h===''||m===''||!Number.isInteger(hour)||hour<0||hour>23||!Number.isInteger(minute)||minute<0||minute>59)return {used:true,valid:false,minutes:NaN};
+ return {used:true,valid:true,minutes:hour*60+minute};
 }
 
 function jobCardResetChecks(){
