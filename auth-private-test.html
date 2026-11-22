@@ -38,10 +38,12 @@ const redirectUri='https://julie903.github.io/edwards-precision-mobile-demo/auth
 const apiScope='api://4b35375d-ca2d-4c5b-a613-5c8adff8e281/Orders.Read';
 const apiUrl='https://edwards-mobile-backend-dev.onrender.com/api/orders';
 const factoryUrl='https://edwards-mobile-backend-dev.onrender.com/api/my-operations';
+const privateOrdersUrl='https://mobile.edwardsprecision.co.uk:9443/api/orders';
 const $=id=>document.getElementById(id);
 let application=null, currentAccount=null, roles=[], screen='home', chosenJob=null;
 let apiJobs=null, apiJobDetails=null, apiMessage='Not loaded', jobFilter='';
 let factoryOperations=null, factoryOperation=null, factoryMessage='Not loaded', chosenOperation=null;
+let liveJobs=null, liveJob=null, liveMessage='Not requested', liveSearch='', chosenLiveWo=null;
 const jobs=[
  {wo:'DEMO-1001',part:'Sample turned housing',customer:'Example Customer A',op:'OP20 · Turning',due:'24-11-2026',status:'In progress'},
  {wo:'DEMO-1002',part:'Sample mounting bracket',customer:'Example Customer B',op:'OP10 · Milling',due:'20-11-2026',status:'Overdue'},
@@ -66,16 +68,26 @@ function filteredJobsHTML(){
  return shown.length?shown.map(makeJob).join(''):'<div class="card"><p>No fictional jobs match your search.</p></div>';
 }
 document.addEventListener('input',ev=>{
+ if(ev.target.id==='liveJobSearch'){
+   liveSearch=ev.target.value;
+   const list=$('filteredLiveJobs');if(list)list.innerHTML=filteredLiveJobsHTML();
+ }
  if(ev.target.id==='jobSearch'){
    jobFilter=ev.target.value;
    const list=$('filteredJobs');if(list)list.innerHTML=filteredJobsHTML();
  }
 });
 
+function filteredLiveJobsHTML(){
+ if(!Array.isArray(liveJobs))return '';
+ const q=liveSearch.trim().toLowerCase();
+ const filtered=liveJobs.filter(j=>[j.wo,j.description,j.partNumber].some(v=>String(v||'').toLowerCase().includes(q)));
+ return filtered.length?filtered.map(j=>`<article class="card job" tabindex="0" role="button" data-live-wo="${escapeHTML(j.wo)}"><div class="row"><h2>${escapeHTML(j.wo)}</h2><span class="tag">${escapeHTML(j.status||'Unspecified')}</span></div><p>${escapeHTML(j.partNumber||'')} · ${escapeHTML(j.description||'')}</p><p>Due ${escapeHTML(formatDate(j.dueDate))} · ${Number(j.operationCount)||0} operations</p></article>`).join(''):'<div class="card"><p>No matching jobs.</p></div>';
+}
 function render(){
  const r=roleInfo();
  $('roleLabel').textContent=r.label;
- $('heading').textContent=({home:'Good morning',jobs:'Open Orders',detail:'Job details',factory:'Factory operations',operation:'Operation detail',ncr:'Non-conformances',more:'More tools'})[screen];
+ $('heading').textContent=({home:'Good morning',jobs:'Open Orders',livejobs:'Private Open Orders',livedetail:'Private job details',detail:'Job details',factory:'Factory operations',operation:'Operation detail',ncr:'Non-conformances',more:'More tools'})[screen];
  $('subtitle').textContent=(screen==='detail'||screen==='operation')?'Fictional details — read only':`Signed in as ${currentAccount.name||currentAccount.username||'employee'}`;
  document.querySelectorAll('[data-page]').forEach(b=>b.classList.toggle('active',b.dataset.page===screen));
  let html='';
@@ -98,6 +110,13 @@ function render(){
  }
  if(screen==='ncr') html=`<div class="card"><h2>${r.office?'Office NCR review':'Factory NCR reporting'}</h2><p>${r.authoriser?'SDNR approval would be available to your authorised account only after the protected backend independently checks your identity and permissions.':r.office?'You may review NCRs but not issue SDNRs.':'Factory staff can raise NCRs and record actions for each defect in the future live system.'}</p><button class="btn" disabled>${r.authoriser?'Issue SDNR — disabled':r.office?'Review NCR — disabled':'Raise NCR — disabled'}</button></div>`;
  if(screen==='more') html=`<div class="card"><h2>Account</h2><p class="idline">${escapeHTML(currentAccount.username||'')}</p><p class="idline">Assigned claims: ${escapeHTML(roles.join(', '))}</p></div><div class="card"><h2>Access</h2><p>${r.office?'Office preview available':'Office preview unavailable'}</p><p>${r.factory?'Factory role assigned':r.authoriser?'Office functions inherited through authoriser policy':'Factory role not assigned'}</p><p>All live data and write actions remain disabled.</p></div>${r.office?'<div class="card"><h2>Factory operations preview</h2><p>Fictional API records only. This does not grant a Factory employee Office permissions.</p><button class="btn" id="previewFactory">Open Factory operations preview</button></div>':''}<div class="card"><h2>Private iMac authentication check</h2><p>Check your Microsoft Office permissions through private NetBird HTTPS. No customer records or Smartsheet access.</p><button class="btn" id="testPrivateAuth">Check private Microsoft access</button><p id="privateAuthResult" role="status" aria-live="polite">Not tested</p></div><div class="card"><h2>Protected Render API test</h2><p>Request an API token from Microsoft and test the development endpoint. Tokens are never displayed.</p><button class="btn" id="testApi">Test Microsoft API connection</button><p id="apiResult" role="status" aria-live="polite">Not tested</p></div><button class="btn secondary" id="signout">Sign out of Microsoft 365 test</button>`;
+ if(screen==='more' && r.office)html+=`<div class="card"><h2>Private Open Orders · read-only pilot</h2><p>Uses the iMac over NetBird and your Microsoft Office authorisation. Customer names and machinist details are not returned. This pilot remains unavailable until the private server is separately approved for live Orders.</p><button class="btn secondary" id="openLiveReadOnly">Open private Jobs pilot</button></div>`;
+ if(screen==='livejobs')html=r.office?`<button class="back" id="backLiveMore">← Back to More</button><div class="card"><h2>Private Open Orders (read-only)</h2><p>${escapeHTML(liveMessage)}</p><button class="btn" id="refreshLiveJobs">Fetch authorised jobs</button></div>${Array.isArray(liveJobs)?`<label for="liveJobSearch" class="quiet">Find work order, part or description</label><input id="liveJobSearch" class="search" type="search" value="${escapeHTML(liveSearch)}" placeholder="Search private jobs" autocomplete="off"><div id="filteredLiveJobs">${filteredLiveJobsHTML()}</div>`:''}`:'<div class="card">Office permission required.</div>';
+ if(screen==='livedetail'){
+   html=`<button class="back" id="backLiveJobs">← Back to private Jobs</button>`;
+   if(!r.office || !liveJob || liveJob.wo!==chosenLiveWo)html+=`<div class="card"><p>${escapeHTML(liveMessage)}</p></div>`;
+   else html+=`<div class="card"><h2>${escapeHTML(liveJob.wo)}</h2><p><b>Part:</b> ${escapeHTML(liveJob.partNumber||'')} · Rev ${escapeHTML(liveJob.revision||'')}</p><p><b>Description:</b> ${escapeHTML(liveJob.description||'')}</p><p><b>Due:</b> ${escapeHTML(formatDate(liveJob.dueDate))}</p><p><b>Status:</b> ${escapeHTML(liveJob.status||'')}</p></div><h2>Operations</h2>${(liveJob.operations||[]).map(op=>`<div class="card"><div class="row"><h2>${escapeHTML(op.op||'')}</h2><span class="tag">${escapeHTML(op.status||'')}</span></div><p>Sequence ${escapeHTML(op.seq||'')} · Machine ${escapeHTML(op.machine||'')}</p><p>Due ${escapeHTML(formatDate(op.dueDate))}</p></div>`).join('')}<p class="quiet">Private Office-only, read-only production data. Editing is disabled.</p>`;
+ }
  $('content').innerHTML=html;
 }
 async function authorisedGet(path){
@@ -132,6 +151,40 @@ async function authorisedFactoryGet(path){
  if(!response.ok)throw Error('HTTP '+response.status+' — '+(typeof body.error==='string'?body.error:'API request failed'));
  if(body.fictional!==true || body.liveData!==false || body.readOnly!==true)throw Error('Unexpected response; refused');
  return body;
+}
+async function privateOrdersGet(path=''){
+ if(!roleInfo().office || !currentAccount || !application)throw Error('Office authorisation required');
+ if(window.location.origin!=='https://julie903.github.io' || window.location.pathname!=='/edwards-precision-mobile-demo/auth-private-test.html')throw Error('Unapproved app location');
+ let result;
+ try{result=await application.acquireTokenSilent({account:currentAccount,scopes:[apiScope]});}
+ catch(err){
+   if(err instanceof msal.InteractionRequiredAuthError || ['interaction_required','consent_required','login_required'].includes(err.errorCode)){
+     await application.acquireTokenRedirect({account:currentAccount,scopes:[apiScope]});return null;
+   }
+   throw Error('Microsoft authentication unavailable');
+ }
+ const response=await fetch(privateOrdersUrl+path,{method:'GET',mode:'cors',cache:'no-store',redirect:'error',referrerPolicy:'no-referrer',headers:{Authorization:'Bearer '+result.accessToken}});
+ if(response.status===503)throw Error('Private live Orders are not enabled yet. No data displayed.');
+ if(response.status===401 || response.status===403)throw Error('Access denied by private Office gateway');
+ if(!response.ok)throw Error('Private read-only service unavailable (HTTP '+response.status+')');
+ const body=await response.json();
+ if(body.readOnly!==true || body.liveData!==true || body.fictional===true)throw Error('Unexpected response mode; no data displayed');
+ return body;
+}
+async function loadLiveJobs(){
+ liveJobs=null;liveJob=null;liveMessage='Checking protected private Orders…';screen='livejobs';render();
+ try{const body=await privateOrdersGet();if(!body)return;if(!Array.isArray(body.jobs)||!Number.isInteger(body.count)||body.count!==body.jobs.length||body.jobs.length>500)throw Error('Unexpected job-list format');
+  liveJobs=body.jobs;liveMessage=body.count+' private read-only jobs retrieved';liveSearch='';}
+ catch(e){liveJobs=null;liveMessage=e instanceof TypeError?'Private connection unavailable; check NetBird':e.message||'Private read-only request failed';}
+ render();
+}
+async function loadLiveDetail(wo){
+ if(!/^[A-Za-z0-9._-]{1,50}$/.test(wo))return;
+ chosenLiveWo=wo;liveJob=null;liveMessage='Loading private job details…';screen='livedetail';render();
+ try{const body=await privateOrdersGet('/'+encodeURIComponent(wo));if(!body)return;if(!body.job||body.job.wo!==wo||!Array.isArray(body.job.operations))throw Error('Unexpected job detail response');
+  liveJob=body.job;liveMessage='Details retrieved';}
+ catch(e){liveJob=null;liveMessage=e instanceof TypeError?'Private connection unavailable; check NetBird':e.message||'Private detail unavailable';}
+ render();
 }
 async function loadFactory(){
  factoryMessage='Loading protected fictional operations…';render();
@@ -179,6 +232,12 @@ document.addEventListener('click',async ev=>{
  const job=ev.target.closest('[data-job]');if(job&&currentAccount&&roleInfo().office){chosenJob=job.dataset.job;screen='detail';await loadDetail(chosenJob);return;}
  if(ev.target.id==='loadJobs'&&currentAccount&&roleInfo().office){await loadJobs();return;}
  if(ev.target.id==='back'){screen='jobs';render();return;}
+ if(ev.target.id==='openLiveReadOnly'&&currentAccount&&roleInfo().office){screen='livejobs';liveJobs=null;liveMessage='Not requested';render();return;}
+ if(ev.target.id==='refreshLiveJobs'&&currentAccount&&roleInfo().office){await loadLiveJobs();return;}
+ if(ev.target.id==='backLiveMore'){screen='more';render();return;}
+ if(ev.target.id==='backLiveJobs'){screen='livejobs';render();return;}
+ const liveTarget=ev.target.closest('[data-live-wo]');
+ if(liveTarget&&currentAccount&&roleInfo().office){await loadLiveDetail(liveTarget.dataset.liveWo);return;}
  if(ev.target.id==='testPrivateAuth'&&application&&currentAccount){
   const button=ev.target;const output=$('privateAuthResult');
   button.disabled=true;output.textContent='Checking private Microsoft permissions…';
