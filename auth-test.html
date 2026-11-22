@@ -165,8 +165,9 @@ function showSignedIn(account){
  const recognised=roles.some(r=>['Office','Factory','SDNR.Authoriser'].includes(r));
  if(!recognised){status('Signed in, but no Edwards Precision Mobile app role was returned. Access denied.');return;}
  currentAccount=account;
- $('loginPanel').hidden=true;$('appPanel').hidden=false;$('nav').hidden=false;
- render();
+ // Preserve the existing Entra redirect URI, but leave this obsolete page after sign-in.
+ window.location.replace('./auth-private-test.html');
+ return;
 }
 document.addEventListener('click',async ev=>{
  const nav=ev.target.closest('[data-page]');if(nav&&currentAccount){screen=nav.dataset.page;chosenJob=null;chosenOperation=null;render();return;}
