@@ -103,7 +103,7 @@ function jobCardClockHTML(id,label){
  return '<label class="quiet" for="'+id+'Hour">'+label+' (12-hour)</label><div class="row"><select class="search" id="'+id+'Hour" aria-label="'+label+' hour"><option value="">Hour</option>'+hours+'</select><select class="search" id="'+id+'Minute" aria-label="'+label+' minute"><option value="">Min</option>'+minutes+'</select><select class="search" id="'+id+'Period" aria-label="'+label+' AM or PM"><option value="">AM/PM</option><option value="AM">AM</option><option value="PM">PM</option></select></div>';
 }
 function jobCardClockMinutes(id){
- const h=$ (id+'Hour')?.value||'',m=$(id+'Minute')?.value||'',p=$(id+'Period')?.value||'';
+ const h=$(id+'Hour')?.value||'',m=$(id+'Minute')?.value||'',p=$(id+'Period')?.value||'';
  if(!h&&!m&&!p)return {used:false,valid:false,minutes:NaN};
  const hour=Number(h),minute=Number(m);
  if(!h||m===''||!['AM','PM'].includes(p)||!Number.isInteger(hour)||hour<1||hour>12||!Number.isInteger(minute)||minute<0||minute>59)return {used:true,valid:false,minutes:NaN};
