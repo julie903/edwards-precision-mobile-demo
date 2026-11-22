@@ -86,6 +86,14 @@ function filteredLiveJobsHTML(){
 }
 function render(){
  const r=roleInfo();
+ const notice=document.querySelector('.notice');
+ if(notice){
+   if(screen==='livejobs'||screen==='livedetail'){
+     notice.textContent='PRIVATE READ-ONLY PILOT — Office-only access through the iMac over NetBird. Live data is shown only after independent server approval. No editing, purchasing or SDNR actions are available.';
+   }else{
+     notice.innerHTML='<b>TEST ONLY — FICTIONAL INFORMATION.</b> The normal demo Jobs screen uses fictional records. Production access is available only through the separate, restricted private pilot.';
+   }
+ }
  $('roleLabel').textContent=r.label;
  $('heading').textContent=({home:'Good morning',jobs:'Open Orders',livejobs:'Private Open Orders',livedetail:'Private job details',detail:'Job details',factory:'Factory operations',operation:'Operation detail',ncr:'Non-conformances',more:'More tools'})[screen];
  $('subtitle').textContent=(screen==='detail'||screen==='operation')?'Fictional details — read only':`Signed in as ${currentAccount.name||currentAccount.username||'employee'}`;
