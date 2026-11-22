@@ -10,7 +10,7 @@
 [hidden]{display:none!important}*{box-sizing:border-box}body{margin:0;padding:0}.app{max-width:530px;min-height:100dvh;margin:0 auto;background:#f7fafc;border-radius:18px;box-shadow:0 8px 35px #142c4014;overflow:hidden;display:flex;flex-direction:column}
 header{background:#142c40;color:#fff;padding:calc(18px + env(safe-area-inset-top)) 20px 18px;display:flex;align-items:center;gap:10px}.mark{background:#237b9c;border-radius:10px;padding:10px;font-size:15px;font-weight:800}header strong{font-size:13px;letter-spacing:1.5px}header small{display:block;color:#9bb5c8;font-size:10px;letter-spacing:2px;margin-top:3px}
 main{padding:17px;flex:1}.notice{font-size:12px;background:#fff7e8;color:#795621;border:1px solid #e6bf71;border-radius:10px;line-height:1.55;padding:12px;margin-bottom:20px}
-.eyebrow{font-size:11px;color:#297b9e;font-weight:800;letter-spacing:1.5px;margin:0 0 7px}h1{font-size:24px;letter-spacing:-.7px;margin:0 0 8px}.muted{font-size:13px;line-height:1.5;color:#607487}.card{background:#fff;border:1px solid #dfe8ef;border-radius:12px;padding:15px;margin:11px 0}.card h2{font-size:16px;margin:0 0 8px}.card p{font-size:13px;line-height:1.5;margin:5px 0;color:#546d80}.row{display:flex;align-items:center;justify-content:space-between;gap:10px}.tag{background:#e7f2f8;color:#216e90;font-weight:750;font-size:11px;padding:5px 8px;border-radius:7px}.tag.warn{background:#fff0e8;color:#ad5b33}
+.eyebrow{font-size:11px;color:#297b9e;font-weight:800;letter-spacing:1.5px;margin:0 0 7px}h1{font-size:24px;letter-spacing:-.7px;margin:0 0 8px}.muted{font-size:13px;line-height:1.5;color:#607487}.card{background:#fff;border:1px solid #dfe8ef;border-radius:12px;padding:15px;margin:11px 0}.card h2{font-size:16px;margin:0 0 8px}.card p{font-size:13px;line-height:1.5;margin:5px 0;color:#546d80}.row{display:flex;align-items:center;justify-content:space-between;gap:10px}.tag{background:#e7f2f8;color:#216e90;font-weight:750;font-size:11px;padding:5px 8px;border-radius:7px}.tag.warn{background:#fff0e8;color:#ad5b33}.late-due{color:#a53623}
 .btn{background:#19769a;border:0;color:#fff;font-size:15px;font-weight:700;padding:13px 16px;border-radius:10px;cursor:pointer;width:100%;margin-top:10px}.btn.secondary{background:#fff;border:1px solid #aec5d2;color:#1d526c}.btn:disabled{opacity:.55;cursor:not-allowed}
 nav{display:flex;border-top:1px solid #dde7ed;background:#fff;position:sticky;bottom:0;padding-bottom:env(safe-area-inset-bottom)}nav button{flex:1;background:transparent;border:0;padding:14px 4px;color:#63798d;font-weight:650;font-size:13px;cursor:pointer}nav button.active{color:#147699;border-top:3px solid #147699;padding-top:11px}
 .stats{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:15px}.stat{background:#fff;border:1px solid #dde7ee;padding:15px;border-radius:12px}.stat b{display:block;font-size:24px}.stat span{font-size:12px;color:#677b8a}.job{cursor:pointer}.job:focus-visible{outline:3px solid #147699}.back{background:none;border:0;color:#147699;font-weight:700;font-size:14px;padding:10px 0;cursor:pointer}
@@ -43,7 +43,7 @@ const $=id=>document.getElementById(id);
 let application=null, currentAccount=null, roles=[], screen='home', chosenJob=null;
 let apiJobs=null, apiJobDetails=null, apiMessage='Not loaded', jobFilter='';
 let factoryOperations=null, factoryOperation=null, factoryMessage='Not loaded', chosenOperation=null;
-let liveJobs=null, liveJob=null, liveMessage='Not requested', liveSearch='', chosenLiveWo=null;
+let liveJobs=null, liveJob=null, liveMessage='Not requested', liveSearch='', chosenLiveWo=null, liveFilter='all';
 const jobs=[
  {wo:'DEMO-1001',part:'Sample turned housing',customer:'Example Customer A',op:'OP20 · Turning',due:'24-11-2026',status:'In progress'},
  {wo:'DEMO-1002',part:'Sample mounting bracket',customer:'Example Customer B',op:'OP10 · Milling',due:'20-11-2026',status:'Overdue'},
@@ -72,17 +72,41 @@ document.addEventListener('input',ev=>{
    liveSearch=ev.target.value;
    const list=$('filteredLiveJobs');if(list)list.innerHTML=filteredLiveJobsHTML();
  }
+ if(ev.target.id==='liveJobFilter'){liveFilter=ev.target.value;const list=$('filteredLiveJobs');if(list)list.innerHTML=filteredLiveJobsHTML();}
  if(ev.target.id==='jobSearch'){
    jobFilter=ev.target.value;
    const list=$('filteredJobs');if(list)list.innerHTML=filteredJobsHTML();
  }
 });
 
+function liveDueKey(j){
+ const d=String(j&&j.dueDate||'');
+ return /^\d{4}-\d{2}-\d{2}$/.test(d)?d:'9999-12-31';
+}
+function liveTodayKey(){
+ const d=new Date();
+ return [d.getFullYear(),String(d.getMonth()+1).padStart(2,'0'),String(d.getDate()).padStart(2,'0')].join('-');
+}
+function liveJobMetrics(){
+ const today=liveTodayKey(),week=new Date();
+ week.setDate(week.getDate()+7);
+ const weekKey=[week.getFullYear(),String(week.getMonth()+1).padStart(2,'0'),String(week.getDate()).padStart(2,'0')].join('-');
+ const overdue=j=>liveDueKey(j)!=='9999-12-31'&&liveDueKey(j)<today;
+ const dueSoon=j=>!overdue(j)&&liveDueKey(j)!=='9999-12-31'&&liveDueKey(j)<=weekKey;
+ return {today,overdue,dueSoon};
+}
+function liveJobSummaryHTML(){
+ if(!Array.isArray(liveJobs))return '';
+ const m=liveJobMetrics();
+ const late=liveJobs.filter(m.overdue).length;
+ const upcoming=liveJobs.filter(m.dueSoon).length;
+ return `<div class="card" aria-label="Live Jobs summary"><div class="row"><strong>${liveJobs.length} open jobs</strong><span class="tag ${late?'warn':''}">${late} overdue</span></div><p>${upcoming} due within the next 7 days · Read-only</p></div>`;
+}
 function filteredLiveJobsHTML(){
  if(!Array.isArray(liveJobs))return '';
- const q=liveSearch.trim().toLowerCase();
- const filtered=liveJobs.filter(j=>[j.wo,j.description,j.partNumber].some(v=>String(v||'').toLowerCase().includes(q)));
- return filtered.length?filtered.map(j=>`<article class="card job" tabindex="0" role="button" data-live-wo="${escapeHTML(j.wo)}"><div class="row"><h2>${escapeHTML(j.wo)}</h2><span class="tag">${escapeHTML(j.status||'Unspecified')}</span></div><p>${escapeHTML(j.partNumber||'')} · ${escapeHTML(j.description||'')}</p><p>Due ${escapeHTML(formatDate(j.dueDate))} · ${Number(j.operationCount)||0} operations</p></article>`).join(''):'<div class="card"><p>No matching jobs.</p></div>';
+ const q=liveSearch.trim().toLowerCase(),m=liveJobMetrics();
+ const filtered=liveJobs.filter(j=>[j.wo,j.description,j.partNumber].some(v=>String(v||'').toLowerCase().includes(q))).filter(j=>liveFilter==='late'?m.overdue(j):liveFilter==='soon'?m.dueSoon(j):true).slice().sort((a,b)=>liveDueKey(a).localeCompare(liveDueKey(b))||String(a.wo||'').localeCompare(String(b.wo||'')));
+ return filtered.length?filtered.map(j=>`<article class="card job" tabindex="0" role="button" data-live-wo="${escapeHTML(j.wo)}" aria-label="View work order ${escapeHTML(j.wo)}"><div class="row"><h2>${escapeHTML(j.wo)}</h2><span class="tag ${m.overdue(j)?'warn':''}">${escapeHTML(j.status||'Unspecified')}</span></div><p>${escapeHTML(j.partNumber||'')} · ${escapeHTML(j.description||'')}</p><p>${m.overdue(j)?'<b class="late-due">Overdue · </b>':'Due '}${escapeHTML(formatDate(j.dueDate))} · ${Number.isFinite(Number(j.operationCount))?Number(j.operationCount):0} operations</p></article>`).join(''):'<div class="card"><p>No matching jobs.</p></div>';
 }
 function render(){
  const r=roleInfo();
@@ -119,7 +143,7 @@ function render(){
  if(screen==='ncr') html=`<div class="card"><h2>${r.office?'Office NCR review':'Factory NCR reporting'}</h2><p>${r.authoriser?'SDNR approval would be available to your authorised account only after the protected backend independently checks your identity and permissions.':r.office?'You may review NCRs but not issue SDNRs.':'Factory staff can raise NCRs and record actions for each defect in the future live system.'}</p><button class="btn" disabled>${r.authoriser?'Issue SDNR — disabled':r.office?'Review NCR — disabled':'Raise NCR — disabled'}</button></div>`;
  if(screen==='more') html=`<div class="card"><h2>Account</h2><p class="idline">${escapeHTML(currentAccount.username||'')}</p><p class="idline">Assigned claims: ${escapeHTML(roles.join(', '))}</p></div><div class="card"><h2>Access</h2><p>${r.office?'Office preview available':'Office preview unavailable'}</p><p>${r.factory?'Factory role assigned':r.authoriser?'Office functions inherited through authoriser policy':'Factory role not assigned'}</p><p>All live data and write actions remain disabled.</p></div>${r.office?'<div class="card"><h2>Factory operations preview</h2><p>Fictional API records only. This does not grant a Factory employee Office permissions.</p><button class="btn" id="previewFactory">Open Factory operations preview</button></div>':''}<div class="card"><h2>Private iMac authentication check</h2><p>Check your Microsoft Office permissions through private NetBird HTTPS. No customer records or Smartsheet access.</p><button class="btn" id="testPrivateAuth">Check private Microsoft access</button><p id="privateAuthResult" role="status" aria-live="polite">Not tested</p></div><div class="card"><h2>Protected Render API test</h2><p>Request an API token from Microsoft and test the development endpoint. Tokens are never displayed.</p><button class="btn" id="testApi">Test Microsoft API connection</button><p id="apiResult" role="status" aria-live="polite">Not tested</p></div><button class="btn secondary" id="signout">Sign out of Microsoft 365 test</button>`;
  if(screen==='more' && r.office)html+=`<div class="card"><h2>Private Open Orders · read-only pilot</h2><p>Uses the iMac over NetBird and your Microsoft Office authorisation. Customer names and machinist details are not returned. This pilot remains unavailable until the private server is separately approved for live Orders.</p><button class="btn secondary" id="openLiveReadOnly">Open private Jobs pilot</button></div>`;
- if(screen==='livejobs')html=r.office?`<button class="back" id="backLiveMore">← Back to More</button><div class="card"><h2>Private Open Orders (read-only)</h2><p>${escapeHTML(liveMessage)}</p><button class="btn" id="refreshLiveJobs">Fetch authorised jobs</button></div>${Array.isArray(liveJobs)?`<label for="liveJobSearch" class="quiet">Find work order, part or description</label><input id="liveJobSearch" class="search" type="search" value="${escapeHTML(liveSearch)}" placeholder="Search private jobs" autocomplete="off"><div id="filteredLiveJobs">${filteredLiveJobsHTML()}</div>`:''}`:'<div class="card">Office permission required.</div>';
+ if(screen==='livejobs')html=r.office?`<button class="back" id="backLiveMore">← Back to More</button><div class="card"><h2>Private Open Orders (read-only)</h2><p>${escapeHTML(liveMessage)}</p><button class="btn" id="refreshLiveJobs">Refresh live jobs</button></div>${Array.isArray(liveJobs)?`${liveJobSummaryHTML()}<label for="liveJobSearch" class="quiet">Find work order, part or description</label><input id="liveJobSearch" class="search" type="search" value="${escapeHTML(liveSearch)}" placeholder="Search private jobs" autocomplete="off"><label for="liveJobFilter" class="quiet">Show jobs</label><select id="liveJobFilter" class="search"><option value="all" ${liveFilter==='all'?'selected':''}>All · Due date order</option><option value="late" ${liveFilter==='late'?'selected':''}>Overdue</option><option value="soon" ${liveFilter==='soon'?'selected':''}>Due within 7 days</option></select><div id="filteredLiveJobs">${filteredLiveJobsHTML()}</div>`:''}`:'<div class="card">Office permission required.</div>';
  if(screen==='livedetail'){
    html=`<button class="back" id="backLiveJobs">← Back to private Jobs</button>`;
    if(!r.office || !liveJob || liveJob.wo!==chosenLiveWo)html+=`<div class="card"><p>${escapeHTML(liveMessage)}</p></div>`;
@@ -182,7 +206,7 @@ async function privateOrdersGet(path=''){
 async function loadLiveJobs(){
  liveJobs=null;liveJob=null;liveMessage='Checking protected private Orders…';screen='livejobs';render();
  try{const body=await privateOrdersGet();if(!body)return;if(!Array.isArray(body.jobs)||!Number.isInteger(body.count)||body.count!==body.jobs.length||body.jobs.length>500)throw Error('Unexpected job-list format');
-  liveJobs=body.jobs;liveMessage=body.count+' private read-only jobs retrieved';liveSearch='';}
+  liveJobs=body.jobs;liveMessage=body.count+' private read-only jobs retrieved';liveSearch='';liveFilter='all';}
  catch(e){liveJobs=null;liveMessage=e instanceof TypeError?'Private connection unavailable; check NetBird':e.message||'Private read-only request failed';}
  render();
 }
