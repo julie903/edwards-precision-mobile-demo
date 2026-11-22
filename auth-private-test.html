@@ -27,7 +27,7 @@ nav{display:flex;border-top:1px solid #dde7ed;background:#fff;position:sticky;bo
 <div class="row"><p class="eyebrow" id="roleLabel"></p><span class="tag">DEVELOPMENT</span></div><h1 id="heading">Home</h1><p class="muted" id="subtitle"></p><div id="content"></div>
 </section>
 </main>
-<nav id="nav" hidden aria-label="Main navigation"><button data-page="home" class="active">Home</button><button data-page="overview" data-office-section hidden>Overview</button><button data-page="jobs">Jobs</button><button data-page="priorities" data-office-section hidden>Priorities</button><button data-page="ncr">NCRs</button><button data-page="more">More</button></nav>
+<nav id="nav" hidden aria-label="Main navigation"><button data-page="home" class="active">Home</button><button data-page="overview" data-office-section hidden>Overview</button><button data-page="jobs">Jobs</button><button data-page="priorities" data-office-section hidden>Priorities</button><button data-page="duedates" data-office-section hidden>Due Dates</button><button data-page="parts" data-office-section hidden>Parts</button><button data-page="ncr">NCRs</button><button data-page="more">More</button></nav>
 </div>
 <script>
 (function(){
@@ -43,7 +43,7 @@ const $=id=>document.getElementById(id);
 let application=null, currentAccount=null, roles=[], screen='home', chosenJob=null;
 let apiJobs=null, apiJobDetails=null, apiMessage='Not loaded', jobFilter='';
 let factoryOperations=null, factoryOperation=null, factoryMessage='Not loaded', chosenOperation=null;
-let liveJobs=null, liveJob=null, liveMessage='Not requested', liveSearch='', chosenLiveWo=null, liveFilter='all';
+let liveJobs=null, liveJob=null, liveMessage='Not requested', liveSearch='', chosenLiveWo=null, liveFilter='all', liveReturnScreen='livejobs', partSearch='';
 const jobs=[
  {wo:'DEMO-1001',part:'Sample turned housing',customer:'Example Customer A',op:'OP20 · Turning',due:'24-11-2026',status:'In progress'},
  {wo:'DEMO-1002',part:'Sample mounting bracket',customer:'Example Customer B',op:'OP10 · Milling',due:'20-11-2026',status:'Overdue'},
@@ -68,6 +68,16 @@ function filteredJobsHTML(){
  return shown.length?shown.map(makeJob).join(''):'<div class="card"><p>No fictional jobs match your search.</p></div>';
 }
 document.addEventListener('input',ev=>{
+ if(ev.target.id==='partFinderSearch'){
+   partSearch=ev.target.value;
+   if(Array.isArray(liveJobs)){
+     const q=partSearch.trim().toLowerCase(),groups=new Map();
+     for(const j of liveJobs.filter(j=>[j.partNumber,j.description,j.wo].some(v=>String(v||'').toLowerCase().includes(q)))){
+       const key=String(j.partNumber||'').trim()||'(No part number)';if(!groups.has(key))groups.set(key,[]);groups.get(key).push(j);
+     }
+     const output=$('partGroups');if(output)output.innerHTML=partsGroupsHTML([...groups].sort((a,b)=>a[0].localeCompare(b[0],undefined,{numeric:true})));
+   }
+ }
  if(ev.target.id==='liveJobSearch'){
    liveSearch=ev.target.value;
    const list=$('filteredLiveJobs');if(list)list.innerHTML=filteredLiveJobsHTML();
@@ -111,6 +121,26 @@ function liveSectionHTML(kind){
  const card=j=>`<article class="card job" tabindex="0" role="button" data-live-wo="${escapeHTML(j.wo)}" aria-label="View ${escapeHTML(j.wo)}"><div class="row"><h2>${escapeHTML(j.wo)}</h2><span class="tag">${escapeHTML(j.status||'Unspecified')}</span></div><p>${escapeHTML(j.partNumber||'')} · ${escapeHTML(j.description||'')}</p><p>Due ${escapeHTML(formatDate(j.dueDate))}</p></article>`;
  return `<div class="card"><p>Due-date groups from the private read-only Orders feed, not a suggested production sequence.</p><button class="btn" id="reloadSection">Refresh priorities</button></div><h2>Overdue · ${late.length}</h2>${late.length?late.map(card).join(''):'<p>No overdue jobs in loaded data.</p>'}<h2>Due within 7 days · ${upcoming.length}</h2>${upcoming.length?upcoming.map(card).join(''):'<p>No upcoming jobs in loaded data.</p>'}`;
 }
+function dueDatesSectionHTML(){
+ if(!Array.isArray(liveJobs))return '<div class="card"><p>Connect NetBird to load the protected read-only Orders feed.</p><button class="btn" id="reloadSection">Load due dates</button></div>';
+ const known=liveJobs.filter(j=>liveDueKey(j)!=='9999-12-31').slice().sort((a,b)=>liveDueKey(a).localeCompare(liveDueKey(b)));
+ const missing=liveJobs.filter(j=>liveDueKey(j)==='9999-12-31');
+ const keys=[...new Set(known.map(j=>liveDueKey(j)))];
+ const card=j=>`<article class="card job" tabindex="0" role="button" data-live-wo="${escapeHTML(j.wo)}"><div class="row"><h2>${escapeHTML(j.wo)}</h2><span class="tag">${escapeHTML(j.status||'Unspecified')}</span></div><p>${escapeHTML(j.partNumber||'')} · ${escapeHTML(j.description||'')}</p></article>`;
+ return `<div class="card"><p>Jobs grouped by due date from the last loaded private Orders feed. This is not a capacity plan.</p><p><b>${known.length}</b> dated · <b>${missing.length}</b> missing due date</p><button class="btn" id="reloadSection">Refresh due dates</button></div>${keys.map(k=>`<h2>${escapeHTML(formatDate(k))} · ${known.filter(j=>liveDueKey(j)===k).length}</h2>${known.filter(j=>liveDueKey(j)===k).map(card).join('')}`).join('')}<h2>Missing due date · ${missing.length}</h2>${missing.length?missing.map(card).join(''):'<p>None in the loaded data.</p>'}`;
+}
+function partsSectionHTML(){
+ if(!Array.isArray(liveJobs))return '<div class="card"><p>Connect NetBird to load the protected read-only Orders feed.</p><button class="btn" id="reloadSection">Load part finder</button></div>';
+ const q=partSearch.trim().toLowerCase();
+ const found=liveJobs.filter(j=>[j.partNumber,j.description,j.wo].some(v=>String(v||'').toLowerCase().includes(q)));
+ const groups=new Map();
+ for(const j of found){const key=String(j.partNumber||'').trim()||'(No part number)';if(!groups.has(key))groups.set(key,[]);groups.get(key).push(j)}
+ const sorted=[...groups].sort((a,b)=>a[0].localeCompare(b[0],undefined,{numeric:true}));
+ return `<div class="card"><h2>Find parts in Open Orders</h2><p>Part numbers are grouped from the loaded read-only Jobs feed. No historical or completed jobs are included.</p><label for="partFinderSearch" class="quiet">Part number, description or work order</label><input class="search" id="partFinderSearch" type="search" value="${escapeHTML(partSearch)}" autocomplete="off" placeholder="Search parts"><p>${found.length} matching jobs · ${groups.size} part groups</p><button class="btn" id="reloadSection">Refresh parts</button></div><div id="partGroups">${partsGroupsHTML(sorted)}</div>`;
+}
+function partsGroupsHTML(groups){
+ return groups.length?groups.map(([part,jobs])=>`<div class="card"><h2>${escapeHTML(part)} · ${jobs.length} ${jobs.length===1?'job':'jobs'}</h2>${jobs.slice().sort((a,b)=>liveDueKey(a).localeCompare(liveDueKey(b))).map(j=>`<article class="job part-job" tabindex="0" role="button" data-live-wo="${escapeHTML(j.wo)}" aria-label="View work order ${escapeHTML(j.wo)}"><p><b>${escapeHTML(j.wo)}</b> · ${escapeHTML(j.description||'')}</p><p>Due ${escapeHTML(formatDate(j.dueDate))} · ${escapeHTML(j.status||'Unspecified')}</p></article>`).join('')}</div>`).join(''):'<div class="card"><p>No matching parts in the loaded Open Orders.</p></div>';
+}
 function filteredLiveJobsHTML(){
  if(!Array.isArray(liveJobs))return '';
  const q=liveSearch.trim().toLowerCase(),m=liveJobMetrics();
@@ -121,14 +151,14 @@ function render(){
  const r=roleInfo();
  const notice=document.querySelector('.notice');
  if(notice){
-   if(screen==='livejobs'||screen==='livedetail'||screen==='overview'||screen==='priorities'){
+   if(['livejobs','livedetail','overview','priorities','duedates','parts'].includes(screen)){
      notice.textContent='PRIVATE READ-ONLY PILOT — Office-only access through the iMac over NetBird. Live data is shown only after independent server approval. No editing, purchasing or SDNR actions are available.';
    }else{
      notice.innerHTML='<b>TEST ONLY — FICTIONAL INFORMATION.</b> The normal demo Jobs screen uses fictional records. Production access is available only through the separate, restricted private pilot.';
    }
  }
  $('roleLabel').textContent=r.label;
- $('heading').textContent=({home:'Good morning',overview:'Production overview',priorities:'Due dates',jobs:'Open Orders',livejobs:'Private Open Orders',livedetail:'Private job details',detail:'Job details',factory:'Factory operations',operation:'Operation detail',ncr:'Non-conformances',more:'More tools'})[screen];
+ $('heading').textContent=({home:'Good morning',overview:'Production overview',priorities:'Production priorities',duedates:'Due date register',parts:'Part finder',jobs:'Open Orders',livejobs:'Private Open Orders',livedetail:'Private job details',detail:'Job details',factory:'Factory operations',operation:'Operation detail',ncr:'Non-conformances',more:'More tools'})[screen];
  $('subtitle').textContent=(screen==='detail'||screen==='operation')?'Fictional details — read only':`Signed in as ${currentAccount.name||currentAccount.username||'employee'}`;
  document.querySelectorAll('[data-page]').forEach(b=>b.classList.toggle('active',b.dataset.page===(r.office&&(screen==='livejobs'||screen==='livedetail')?'jobs':screen)));
  document.querySelectorAll('[data-office-section]').forEach(b=>b.hidden=!r.office);
@@ -153,6 +183,8 @@ function render(){
  }
  if(screen==='overview') html=r.office?liveSectionHTML('overview'):'<div class="card">Office access required.</div>';
  if(screen==='priorities') html=r.office?liveSectionHTML('priorities'):'<div class="card">Office access required.</div>';
+ if(screen==='duedates') html=r.office?dueDatesSectionHTML():'<div class="card">Office access required.</div>';
+ if(screen==='parts') html=r.office?partsSectionHTML():'<div class="card">Office access required.</div>';
  if(screen==='ncr') html=`<div class="card"><h2>${r.office?'Office NCR review':'Factory NCR reporting'}</h2><p>${r.authoriser?'SDNR approval would be available to your authorised account only after the protected backend independently checks your identity and permissions.':r.office?'You may review NCRs but not issue SDNRs.':'Factory staff can raise NCRs and record actions for each defect in the future live system.'}</p><button class="btn" disabled>${r.authoriser?'Issue SDNR — disabled':r.office?'Review NCR — disabled':'Raise NCR — disabled'}</button></div>`;
  if(screen==='more') html=`<div class="card"><h2>Account</h2><p class="idline">${escapeHTML(currentAccount.username||'')}</p><p class="idline">Assigned claims: ${escapeHTML(roles.join(', '))}</p></div><div class="card"><h2>Access</h2><p>${r.office?'Office preview available':'Office preview unavailable'}</p><p>${r.factory?'Factory role assigned':r.authoriser?'Office functions inherited through authoriser policy':'Factory role not assigned'}</p><p>All live data and write actions remain disabled.</p></div>${r.office?'<div class="card"><h2>Factory operations preview</h2><p>Fictional API records only. This does not grant a Factory employee Office permissions.</p><button class="btn" id="previewFactory">Open Factory operations preview</button></div>':''}<div class="card"><h2>Private iMac authentication check</h2><p>Check your Microsoft Office permissions through private NetBird HTTPS. No customer records or Smartsheet access.</p><button class="btn" id="testPrivateAuth">Check private Microsoft access</button><p id="privateAuthResult" role="status" aria-live="polite">Not tested</p></div><div class="card"><h2>Protected Render API test</h2><p>Request an API token from Microsoft and test the development endpoint. Tokens are never displayed.</p><button class="btn" id="testApi">Test Microsoft API connection</button><p id="apiResult" role="status" aria-live="polite">Not tested</p></div><button class="btn secondary" id="signout">Sign out of Microsoft 365 test</button>`;
  if(screen==='more' && r.office)html+='<div class="card"><h2>Other modules — not yet connected</h2><p>Collections, Material &amp; POs, Quotations &amp; RFQs and Statements are planned sections. They are not live or editable in this pilot.</p></div>';
@@ -291,7 +323,7 @@ function showSignedIn(account){
  render();
 }
 document.addEventListener('click',async ev=>{
- const nav=ev.target.closest('[data-page]');if(nav&&currentAccount){const page=nav.dataset.page;if(['overview','priorities'].includes(page)&&!roleInfo().office)return;screen=(page==='jobs'&&roleInfo().office)?'livejobs':page;chosenJob=null;chosenOperation=null;render();if(['livejobs','overview','priorities'].includes(screen)&&!Array.isArray(liveJobs))await loadLiveJobsForSection();return;}
+ const nav=ev.target.closest('[data-page]');if(nav&&currentAccount){const page=nav.dataset.page;if(['overview','priorities','duedates','parts'].includes(page)&&!roleInfo().office)return;screen=(page==='jobs'&&roleInfo().office)?'livejobs':page;chosenJob=null;chosenOperation=null;render();if(['livejobs','overview','priorities','duedates','parts'].includes(screen)&&!Array.isArray(liveJobs))await loadLiveJobsForSection();return;}
  if(ev.target.id==='openJobs'&&currentAccount){screen=roleInfo().office?'livejobs':'jobs';render();if(screen==='livejobs'&&!Array.isArray(liveJobs))await loadLiveJobs();return;}
  if(ev.target.id==='reloadSection'&&currentAccount&&roleInfo().office){await loadLiveJobsForSection();return;}
  if(ev.target.id==='overviewGoJobs'&&roleInfo().office){screen='livejobs';render();return;}
@@ -308,10 +340,10 @@ document.addEventListener('click',async ev=>{
  if(ev.target.id==='openLiveReadOnly'&&currentAccount&&roleInfo().office){screen='livejobs';render();if(!Array.isArray(liveJobs))await loadLiveJobs();return;}
  if(ev.target.id==='refreshLiveJobs'&&currentAccount&&roleInfo().office){await loadLiveJobs();return;}
  if(ev.target.id==='backLiveMore'){screen='more';render();return;}
- if(ev.target.id==='backLiveJobs'){screen='livejobs';render();return;}
+ if(ev.target.id==='backLiveJobs'){screen=liveReturnScreen;render();return;}
  if(ev.target.id==='retryLiveDetail'&&currentAccount&&roleInfo().office&&chosenLiveWo){await loadLiveDetail(chosenLiveWo);return;}
  const liveTarget=ev.target.closest('[data-live-wo]');
- if(liveTarget&&currentAccount&&roleInfo().office){await loadLiveDetail(liveTarget.dataset.liveWo);return;}
+ if(liveTarget&&currentAccount&&roleInfo().office){liveReturnScreen=screen;await loadLiveDetail(liveTarget.dataset.liveWo);return;}
  if(ev.target.id==='testPrivateAuth'&&application&&currentAccount){
   const button=ev.target;const output=$('privateAuthResult');
   button.disabled=true;output.textContent='Checking private Microsoft permissions…';
