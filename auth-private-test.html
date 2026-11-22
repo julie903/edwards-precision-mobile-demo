@@ -74,7 +74,7 @@ document.addEventListener('change',ev=>{
  if(/^jc(Setup|Run)(Start|Finish)(Hour|Minute)$/.test(ev.target.id))jobCardUpdateTotals();
  if(['jcWo','jcOp','jcMachinist'].includes(ev.target.id))jobCardResetChecks();
  if(ev.target.id==='jcOp'&&jobCardLookup&&Array.isArray(jobCardLookup.operations)){
-   const selected=jobCardLookup.operations[Number(ev.target.value)];
+   const selected=ev.target.value===''?null:jobCardLookup.operations[Number(ev.target.value)];
    const current=$('jcMachinist'),note=$('jcMachinistInfo');
    if(current){
      current.value='';
